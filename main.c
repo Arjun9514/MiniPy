@@ -34,7 +34,11 @@ int interactive(){
             ASTNode* stmt = parse_statement();
             if (error) goto end;
 
-            if (debug) print_ast_debug(stmt,0);//for debugging
+            if (debug){//for debugging
+                printf("************AST**************\n"); 
+                print_ast_debug(stmt,0); 
+                printf("*****************************\n");
+            }
             
             eval(stmt);
             if (error) goto end;

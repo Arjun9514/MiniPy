@@ -1,4 +1,9 @@
 // ast.h
+#ifndef AST_H
+#define AST_H
+
+#include "memory.h"
+
 typedef enum {
     AST_NUMERIC,
     AST_FLOATING_POINT,
@@ -14,13 +19,10 @@ typedef struct ASTNode {
     ASTNodeType type;
 
     union {
-        int numeric; // for AST_NUMERIC
-        float floating_point; // for AST_FLOATING_POINT
-        char* string;// for AST_STRING
-        int boolean;// for AST_BOOLEAN
-
         char* name; // for AST_IDENTIFIER
         
+        struct Literal literal; // for AST_NUMERIC,AST_FLOATING_POINT,AST_STRING,AST_BOOLEAN
+
         struct { // for AST_OPERATOR
             struct ASTNode* left;
             char op;
@@ -49,3 +51,5 @@ Token advance();
 
 ASTNode* parse_expression();
 ASTNode* parse_statement();
+
+#endif

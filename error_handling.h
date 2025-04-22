@@ -1,3 +1,7 @@
+//error_handling.h
+#ifndef ERROR_HANDLING_H
+#define ERROR_HANDLING_H
+
 typedef enum{
     SYNTAX_ERROR,
     NAME_ERROR,
@@ -9,3 +13,5 @@ typedef enum{
 }ErrorType;
 
 void raiseError(ErrorType type, char* error_msg);
+
+#endif

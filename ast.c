@@ -64,9 +64,13 @@ void print_ast_debug(ASTNode* node, int indent) {
         print_ast_debug(node->operate.left, indent + 1);
         print_ast_debug(node->operate.right, indent + 1);
     } else if (node->type == AST_NUMERIC) {
-        printf(" %d\n", node->numeric);
+        printf(" %c %d\n", node->literal.datatype, node->literal.numeric);
     } else if (node->type == AST_FLOATING_POINT) {
-        printf(" %f\n", node->floating_point);
+        printf(" %c %f\n", node->literal.datatype, node->literal.floating_point);
+    } else if (node->type == AST_BOOLEAN) {
+        printf(" %c %d\n", node->literal.datatype, node->literal.boolean);
+    } else if (node->type == AST_STRING) {
+        printf(" %c \"%s\"\n", node->literal.datatype, node->literal.string);
     } else if (node->type == AST_IDENTIFIER) {
         printf(" %s\n", node->name);
     } else {
@@ -79,8 +83,9 @@ ASTNode* parse_numeric() {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = AST_NUMERIC;
     char *end;
-    int value = (int)strtol(tok.text, &end, 10);
-    node->numeric = value;
+    int val = (int)strtol(tok.text, &end, 10);
+    node->literal.datatype = 'd';
+    node->literal.numeric = val;
     return node;
 }
 
@@ -89,8 +94,9 @@ ASTNode* parse_floating_point() {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = AST_FLOATING_POINT;
     char *end;
-    float value = strtof(tok.text, &end);
-    node->floating_point = value;
+    float val = strtof(tok.text, &end);
+    node->literal.datatype = 'f';
+    node->literal.floating_point = val;
     return node;
 }
 
@@ -98,7 +104,8 @@ ASTNode* parse_string() {
     Token tok = advance();
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = AST_STRING;
-    node->string = tok.text;
+    node->literal.datatype = 's';
+    node->literal.string = tok.text;
     return node;
 }
 
@@ -107,10 +114,11 @@ ASTNode* parse_boolean() {
     ASTNode* node = malloc(sizeof(ASTNode));
     char* end;
     node->type = AST_BOOLEAN;
+    node->literal.datatype = 'b';
     if (strcmp(tok.text,"True") == 0){
-        node->boolean = 1;
+        node->literal.boolean = 1;
     }else{
-        node->boolean = 0;
+        node->literal.boolean = 0;
     }
     return node;
 }

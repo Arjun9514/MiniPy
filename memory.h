@@ -1,6 +1,8 @@
 // memory.h
-typedef struct Variable {
-    char* name;
+#ifndef MEMORY_H
+#define MEMORY_H
+
+typedef struct Literal{
     char datatype;
     union {
         int numeric; // for NUMERIC
@@ -8,20 +10,17 @@ typedef struct Variable {
         char* string;// for STRING
         int boolean;// for BOOLEAN
     };
+} Literal;
+
+typedef struct Variable {
+    char* name;
+    Literal literal;
     struct Variable* next;
 } Variable;
 
-typedef struct {
-    char datatype;
-    union {
-        int numeric;
-        float floating_point;
-        char* string;
-        int boolean;
-    };
-} Value;
-
 extern Variable* symbol_table;
 
-void set_variable(const char* name,const char datatype,...);
-Value get_variable(const char* name);
+void set_variable(const char* name, Literal literal);
+Literal get_variable(const char* name);
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 typedef enum {
     TOKEN_EOF,
     TOKEN_IDENTIFIER,
@@ -34,3 +37,5 @@ void reset_tokens();
 const char* token_name(TokenType type);
 
 void tokenize(const char* src);
+
+#endif

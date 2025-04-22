@@ -41,6 +41,7 @@ int is_bool(const char* str) {
 }
 
 void print_tokens_debug(){
+    printf("***********Tokens************\n");
     for (int i = 0; i < token_count; i++) {
         printf("%s(%s)\n", token_name(tokens[i].type), tokens[i].text);
     }

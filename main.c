@@ -12,6 +12,8 @@ extern int error;
 const char* keywords[] = {"exit","print","if","else","True","False"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
+int debug = 0;
+
 int interactive(){
     char input[255];
     do{
@@ -24,14 +26,16 @@ int interactive(){
 
         if (error)goto end;
         
-        print_tokens_debug();
+        if (debug) print_tokens_debug();//for debugging
 
         if(strcasecmp(input,"exit") == 0) break;
 
         while (peek().type != TOKEN_EOF) {
             ASTNode* stmt = parse_statement();
-            print_ast_debug(stmt,0);
             if (error) goto end;
+
+            if (debug) print_ast_debug(stmt,0);//for debugging
+            
             eval(stmt);
             if (error) goto end;
         }

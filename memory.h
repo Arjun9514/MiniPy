@@ -6,6 +6,7 @@ typedef struct Variable {
         int numeric; // for NUMERIC
         float floating_point; // for FLOATING_POINT
         char* string;// for STRING
+        int boolean;// for BOOLEAN
     };
     struct Variable* next;
 } Variable;
@@ -16,6 +17,7 @@ typedef struct {
         int numeric;
         float floating_point;
         char* string;
+        int boolean;
     };
 } Value;
 

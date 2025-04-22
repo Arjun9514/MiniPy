@@ -9,9 +9,6 @@
 extern Token* tokens;
 extern int token_count;
 
-extern char error_msg[255];
-extern int error;
-
 extern char *keywords[];
 extern const int num_keywords;
 
@@ -34,6 +31,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_NUMERIC: return "NUMERIC";
         case AST_FLOATING_POINT: return "FLOATING_POINT";
         case AST_STRING: return "STRING";
+        case AST_BOOLEAN: return "BOOLEAN";
         case AST_IDENTIFIER: return "IDENTIFIER";
         case AST_OPERATOR: return "OPERATOR";
         case AST_ASSIGNMENT: return "ASSIGN";
@@ -104,6 +102,19 @@ ASTNode* parse_string() {
     return node;
 }
 
+ASTNode* parse_boolean() {
+    Token tok = advance();
+    ASTNode* node = malloc(sizeof(ASTNode));
+    char* end;
+    node->type = AST_BOOLEAN;
+    if (strcmp(tok.text,"True") == 0){
+        node->boolean = 1;
+    }else{
+        node->boolean = 0;
+    }
+    return node;
+}
+
 ASTNode* parse_identifier() {
     Token tok = advance();
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -129,12 +140,15 @@ ASTNode* parse_paren() {
 
 ASTNode* parse_primary() {
     Token tok = peek();
-    if (tok.type == TOKEN_NUMERIC) return parse_numeric();
-    if (tok.type == TOKEN_FLOATING_POINT) return parse_floating_point();
-    if (tok.type == TOKEN_STRING) return parse_string();
-    if (tok.type == TOKEN_IDENTIFIER) return parse_identifier();
-    if (tok.type == TOKEN_LPAREN) return parse_paren();
-    return NULL;
+    switch (tok.type){
+        case TOKEN_NUMERIC: return parse_numeric();
+        case TOKEN_FLOATING_POINT: return parse_floating_point();
+        case TOKEN_STRING: return parse_string();
+        case TOKEN_BOOLEAN: return parse_boolean();
+        case TOKEN_IDENTIFIER: return parse_identifier();
+        case TOKEN_LPAREN: return parse_paren();
+        default: return NULL;
+    }
 }
 
 ASTNode* parse_expression_prec(int min_prec);

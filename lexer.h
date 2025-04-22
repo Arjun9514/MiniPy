@@ -5,6 +5,7 @@ typedef enum {
     TOKEN_NUMERIC,
     TOKEN_FLOATING_POINT,
     TOKEN_STRING,
+    TOKEN_BOOLEAN,
     //
     TOKEN_KEYWORD,
     TOKEN_OPERATOR,

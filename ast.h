@@ -3,6 +3,7 @@ typedef enum {
     AST_NUMERIC,
     AST_FLOATING_POINT,
     AST_STRING,
+    AST_BOOLEAN,
     AST_IDENTIFIER,
     AST_OPERATOR,
     AST_ASSIGNMENT,
@@ -16,6 +17,7 @@ typedef struct ASTNode {
         int numeric; // for AST_NUMERIC
         float floating_point; // for AST_FLOATING_POINT
         char* string;// for AST_STRING
+        int boolean;// for AST_BOOLEAN
 
         char* name; // for AST_IDENTIFIER
         

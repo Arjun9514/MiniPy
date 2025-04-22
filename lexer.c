@@ -33,6 +33,13 @@ int is_keyword(const char* str) {
     return 0;
 }
 
+int is_bool(const char* str) {
+    if (strcmp(str, "True") == 0 || strcmp(str, "False") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 void print_tokens_debug(){
     for (int i = 0; i < token_count; i++) {
         printf("%s(%s)\n", token_name(tokens[i].type), tokens[i].text);
@@ -45,6 +52,7 @@ const char* token_name(TokenType type) {
         case TOKEN_NUMERIC: return "NUMERIC";
         case TOKEN_FLOATING_POINT: return "FLOATING_POINT";
         case TOKEN_STRING: return "STRING";
+        case TOKEN_BOOLEAN: return "BOOLEAN";
         case TOKEN_ASSIGN: return "ASSIGN";
         case TOKEN_OPERATOR: return "OPERATOR";
         case TOKEN_LPAREN: return "L_PAREN";
@@ -89,7 +97,11 @@ void tokenize(const char* src) {
             while (isalnum(*p) || *p == '_') p++;
             int len = p - start;
             if (is_keyword(strndup(start, len))) {
-                add_token(TOKEN_KEYWORD, start, len);
+                if (is_bool(strndup(start, len))){
+                    add_token(TOKEN_BOOLEAN, start, len);
+                }else{
+                    add_token(TOKEN_KEYWORD, start, len);
+                }
             } else {
                 add_token(TOKEN_IDENTIFIER, start, len);
             }

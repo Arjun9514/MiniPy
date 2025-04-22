@@ -1,0 +1,200 @@
+// lexer.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "lexer.h"
+#include "error_handling.h"
+
+#define MAX_TOKENS 1000
+
+Token* tokens;
+int token_count = 0;
+
+extern int error;
+
+extern char *keywords[];
+extern const int num_keywords;
+
+char* strndup(const char* s, size_t n) {
+    char* out = malloc(n + 1);
+    if (!out) return NULL;
+    strncpy(out, s, n);
+    out[n] = '\0';
+    return out;
+}
+
+int is_keyword(const char* str) {
+    for (int i = 0; i < num_keywords; i++) {
+        if (strcmp(str, keywords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void print_tokens_debug(){
+    for (int i = 0; i < token_count; i++) {
+        printf("%s(%s)\n", token_name(tokens[i].type), tokens[i].text);
+    }
+}
+
+const char* token_name(TokenType type) {
+    switch (type) {
+        case TOKEN_IDENTIFIER: return "IDENTIFIER";
+        case TOKEN_NUMERIC: return "NUMERIC";
+        case TOKEN_FLOATING_POINT: return "FLOATING_POINT";
+        case TOKEN_STRING: return "STRING";
+        case TOKEN_ASSIGN: return "ASSIGN";
+        case TOKEN_OPERATOR: return "OPERATOR";
+        case TOKEN_LPAREN: return "L_PAREN";
+        case TOKEN_RPAREN: return "R_PAREN";
+        case TOKEN_BRACE_OPEN: return "L_BRACE";
+        case TOKEN_BRACE_CLOSE: return "R_BRACE";
+        case TOKEN_KEYWORD: return "KEYWORD";
+        case TOKEN_EOF: return "EOF";
+        case TOKEN_SEMICOLON: return "SEMI_COLON";
+        default: return "UNKNOWN";
+    }
+}
+
+void add_token(TokenType type, const char* start, int length) {
+    Token* tok = &tokens[token_count++];
+    tok->type = type;
+    tok->text = strndup(start, length);
+}
+
+void reset_tokens() {
+    for (int i = 0; i < token_count; i++) {
+        free(tokens[i].text);
+        tokens[i].text = NULL;
+    }
+    token_count = 0;
+    error = 0;
+}
+
+void tokenize(const char* src) {
+    tokens = malloc(sizeof(Token) * MAX_TOKENS);
+    token_count = 0;
+
+    const char* p = src;
+
+    while (*p) {
+        if (isspace(*p)) {
+            p++; continue;
+        }
+
+        if (isalpha(*p) || *p == '_') {
+            const char* start = p;
+            while (isalnum(*p) || *p == '_') p++;
+            int len = p - start;
+            if (is_keyword(strndup(start, len))) {
+                add_token(TOKEN_KEYWORD, start, len);
+            } else {
+                add_token(TOKEN_IDENTIFIER, start, len);
+            }
+            continue;
+        }
+
+        if (isdigit(*p) || *p == '.') {
+            const char* start = p;
+            int fp = 0;
+            if (*p == '.') {
+                fp++;
+                p++;
+                if (!isdigit(*p)) {
+                    raiseError(VALUE_ERROR, "Improper floating point literal (dot not followed by digit)");
+                    break;
+                }
+                while (isdigit(*p) || *p == '.'){ 
+                    p++;
+                    if (*p == '.') fp++;
+                }
+            } else {
+                while (isdigit(*p) || *p == '.'){ 
+                    p++;
+                    if (*p == '.') fp++;
+                }
+            }
+        
+            if (fp > 1) {
+                raiseError(VALUE_ERROR, "Improper floating point literal (multiple dots)");
+                break;
+            }
+        
+            if (fp == 1) {
+                add_token(TOKEN_FLOATING_POINT, start, p - start);
+            } else {
+                add_token(TOKEN_NUMERIC, start, p - start);
+            }
+            continue;
+        }
+        
+        if (*p == '\"' || *p == '\'') {
+            char quote_type = *p;           // Either ' or "
+            const char* start = p + 1;      // Skip opening quote
+            p++;
+            
+            // Go until we find the matching quote or end of string
+            while (*p && *p != quote_type) {
+                if (*p == '\\' && *(p+1)) { // Handle escaped characters
+                    p += 2; // skip \"
+                } else {
+                    p++;
+                }
+            }
+        
+            if (*p == quote_type) {
+                add_token(TOKEN_STRING, start, p - start);
+                p++; // Skip closing quote
+                continue;
+            } else {
+                raiseError(LITERAL_ERROR,"Unterminated string literal");
+                break;
+            }
+        }
+        
+        switch (*p) {
+            case '=': 
+                if(*(p+1) == '='){
+                    add_token(TOKEN_OPERATOR, p, 2);
+                    p++;
+                }else{
+                    add_token(TOKEN_ASSIGN, p, 1); 
+                }
+                break;
+            case '>': 
+                if(*(p+1) == '='){
+                    add_token(TOKEN_OPERATOR, p, 2);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
+            case '<': 
+                if(*(p+1) == '='){
+                    add_token(TOKEN_OPERATOR, p, 2);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
+            case '+': add_token(TOKEN_OPERATOR, p, 1); break;
+            case '-': add_token(TOKEN_OPERATOR, p, 1); break;
+            case '*': add_token(TOKEN_OPERATOR, p, 1); break;
+            case '/': add_token(TOKEN_OPERATOR, p, 1); break;
+            case '(': add_token(TOKEN_LPAREN, p, 1); break;
+            case ')': add_token(TOKEN_RPAREN, p, 1); break;
+            case '{': add_token(TOKEN_BRACE_OPEN, p, 1); break;
+            case '}': add_token(TOKEN_BRACE_CLOSE, p, 1); break;
+            case ';': add_token(TOKEN_SEMICOLON, p, 1); break;
+            default:
+                add_token(TOKEN_UNKNOWN, p, 1); 
+                raiseError(SYNTAX_ERROR, "Improper token used");
+                break;
+        }
+        p++;
+    }
+
+    add_token(TOKEN_EOF, "", 0);
+}

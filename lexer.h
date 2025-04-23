@@ -20,6 +20,7 @@ typedef enum {
     TOKEN_BRACE_CLOSE,
     //
     TOKEN_ASSIGN,
+    TOKEN_COLON,
     TOKEN_SEMICOLON,
     TOKEN_UNKNOWN
 } TokenType;

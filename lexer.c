@@ -101,6 +101,7 @@ const char* token_name(TokenType type) {
         case TOKEN_KEYWORD: return "KEYWORD";
         case TOKEN_EOF: return "EOF";
         case TOKEN_SEMICOLON: return "SEMI_COLON";
+        case TOKEN_COLON: return "COLON";
         default: return "UNKNOWN";
     }
 }
@@ -255,6 +256,7 @@ void tokenize(const char* src) {
             case '{': add_token(TOKEN_BRACE_OPEN, p, 1); break;
             case '}': add_token(TOKEN_BRACE_CLOSE, p, 1); break;
             case ';': add_token(TOKEN_SEMICOLON, p, 1); break;
+            case ':': add_token(TOKEN_COLON, p, 1); break;
             default:
                 add_token(TOKEN_UNKNOWN, p, 1); 
                 raiseError(SYNTAX_ERROR, "Improper token used");

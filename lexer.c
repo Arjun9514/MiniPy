@@ -170,15 +170,24 @@ void tokenize(const char* src) {
         switch (*p) {
             case '=': 
                 if(*(p+1) == '='){
-                    add_token(TOKEN_OPERATOR, p, 2);
+                    char *op = "e";
+                    add_token(TOKEN_OPERATOR, op, 1);
                     p++;
                 }else{
                     add_token(TOKEN_ASSIGN, p, 1); 
                 }
                 break;
+            case '!': 
+                if(*(p+1) == '='){
+                    char *op = "n";
+                    add_token(TOKEN_OPERATOR, op, 1);
+                    p++;
+                    break;
+                }
             case '>': 
                 if(*(p+1) == '='){
-                    add_token(TOKEN_OPERATOR, p, 2);
+                    char *op = "g";
+                    add_token(TOKEN_OPERATOR, op, 1);
                     p++;
                 }else{
                     add_token(TOKEN_OPERATOR, p, 1); 
@@ -186,7 +195,8 @@ void tokenize(const char* src) {
                 break;
             case '<': 
                 if(*(p+1) == '='){
-                    add_token(TOKEN_OPERATOR, p, 2);
+                    char *op = "l";
+                    add_token(TOKEN_OPERATOR, op, 1);
                     p++;
                 }else{
                     add_token(TOKEN_OPERATOR, p, 1); 

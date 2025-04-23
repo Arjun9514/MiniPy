@@ -16,8 +16,9 @@ int current = 0;
 
 int get_precedence(char op) {
     switch (op) {
-        case '*': case '/': return 2;
-        case '+': case '-': return 1;
+        case '*': case '/': return 3;
+        case '+': case '-': return 2;
+        case '>': case '<': case 'g': case 'e': case 'l': case 'n': return 1;
         default: return 0;
     }
 }

@@ -80,6 +80,7 @@ ASTNode* operate(ASTNode* node){
             case '-': result.numeric = l - r; break;
             case '*': result.numeric = l * r; break;
             case '/': result.datatype = 'f'; result.floating_point = (float)l / r; break;
+            case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }
     }
@@ -95,6 +96,7 @@ ASTNode* operate(ASTNode* node){
             case '-': result.floating_point = l - r; break;
             case '*': result.floating_point = l * r; break;
             case '/': result.floating_point = l / r; break;
+            case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }
     }
@@ -117,6 +119,19 @@ ASTNode* operate(ASTNode* node){
         zero_division_error:
             raiseError(ZERO_DIVISION_ERROR, "Division by zero");
             return NULL;
+        //Comparative Operation
+        comparative_operation: 
+            float l = (left_val.datatype == 'f') ? left_val.floating_point : (left_val.datatype == 'd') ? (float)left_val.numeric : (float)left_val.boolean;
+            float r = (right_val.datatype == 'f') ? right_val.floating_point : (right_val.datatype == 'd') ? (float)right_val.numeric : (float)right_val.boolean;
+            result.datatype = 'b';
+            switch (op){
+                case '>': result.boolean = l > r; break;
+                case '<': result.boolean = l < r; break;
+                case 'g': result.boolean = l >= r; break;
+                case 'e': result.boolean = l == r; break;
+                case 'f': result.boolean = l <= r; break;
+                case 'n': result.boolean = l != r; break;
+            }
     }
 
     switch (result.datatype){

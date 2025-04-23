@@ -5,6 +5,7 @@
 #include "memory.h"
 
 typedef enum {
+    AST_NONE,
     AST_NUMERIC,
     AST_FLOATING_POINT,
     AST_STRING,

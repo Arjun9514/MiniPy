@@ -153,7 +153,8 @@ void eval(ASTNode* node) {
             case AST_BOOLEAN:
                 print_literal(node->literal);
                 break;
-
+            case AST_NONE:
+                break;
             case AST_IDENTIFIER:{
                 Literal lit = get_variable(node->name);
                 if (lit.datatype != '0'){
@@ -176,6 +177,7 @@ void eval(ASTNode* node) {
             case AST_ASSIGNMENT:{
                 ASTNode* sub_node = node->assign.value;
                 switch (sub_node->type) {
+                    case AST_NONE:
                     case AST_NUMERIC:
                     case AST_FLOATING_POINT:
                     case AST_STRING:

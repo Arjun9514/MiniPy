@@ -29,6 +29,7 @@ char* get_key(){
 
 const char* AST_node_name(ASTNodeType type) {
     switch (type) {
+        case AST_NONE: return "NONE";
         case AST_NUMERIC: return "NUMERIC";
         case AST_FLOATING_POINT: return "FLOATING_POINT";
         case AST_STRING: return "STRING";
@@ -77,6 +78,14 @@ void print_ast_debug(ASTNode* node, int indent) {
     } else {
         printf("\n");
     }
+}
+
+ASTNode* parse_none() {
+    Token tok = advance();
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = AST_NONE;
+    node->literal.datatype = 'n';
+    return node;
 }
 
 ASTNode* parse_numeric() {
@@ -150,6 +159,7 @@ ASTNode* parse_paren() {
 ASTNode* parse_primary() {
     Token tok = peek();
     switch (tok.type){
+        case TOKEN_NONE: return parse_none();
         case TOKEN_NUMERIC: return parse_numeric();
         case TOKEN_FLOATING_POINT: return parse_floating_point();
         case TOKEN_STRING: return parse_string();

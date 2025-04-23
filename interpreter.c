@@ -138,6 +138,7 @@ ASTNode* operate(ASTNode* node){
         case 'd': temp->type = AST_NUMERIC; break;
         case 'f': temp->type = AST_FLOATING_POINT; break;
         case 's': temp->type = AST_STRING; break;
+        case 'b': temp->type = AST_BOOLEAN; break;
         default:break;
     }
     temp->literal = result;

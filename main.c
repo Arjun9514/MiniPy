@@ -9,7 +9,7 @@
 extern int current;
 extern int error;
 
-const char* keywords[] = {"exit","print","if","else","True","False"}; 
+const char* keywords[] = {"exit","print","if","else","True","False","None"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
 int debug = 0;

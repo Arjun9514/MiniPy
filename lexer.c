@@ -40,6 +40,13 @@ int is_bool(const char* str) {
     return 0;
 }
 
+int is_none(const char* str) {
+    if (strcmp(str, "None") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 void print_tokens_debug(){
     printf("***********Tokens************\n");
     for (int i = 0; i < token_count; i++) {
@@ -100,6 +107,8 @@ void tokenize(const char* src) {
             if (is_keyword(strndup(start, len))) {
                 if (is_bool(strndup(start, len))){
                     add_token(TOKEN_BOOLEAN, start, len);
+                }else if (is_none(strndup(start, len))){
+                    add_token(TOKEN_NONE, start, len);
                 }else{
                     add_token(TOKEN_KEYWORD, start, len);
                 }

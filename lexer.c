@@ -24,6 +24,36 @@ char* strndup(const char* s, size_t n) {
     return out;
 }
 
+char* process_str(const char* s, size_t len, int size){
+    char* out = malloc(size + 1);
+    if (!out) return NULL;
+    char* p = out;
+    const char* end = s + len;
+    while (s < end) {
+        if (*s == '\\' && s + 1 < end) {
+            s++;
+            switch (*s) {
+                case 'n':  *p++ = '\n'; break;
+                case 'r':  *p++ = '\r'; break;
+                case 't':  *p++ = '\t'; break;
+                case '\\': *p++ = '\\'; break;
+                case '\'': *p++ = '\''; break;
+                case '"':  *p++ = '"';  break;
+                default:
+                    char msg[255];
+                    sprintf(msg,"Invalid escape sequence ->\'\\%c\'",*s);
+                    raiseError(LITERAL_ERROR,msg);
+                    return NULL;
+            }
+            s++;
+        }
+        else {
+            *p++ = *s++;
+        }
+    }
+    return out;
+}
+
 int is_keyword(const char* str) {
     for (int i = 0; i < num_keywords; i++) {
         if (strcmp(str, keywords[i]) == 0) {
@@ -153,6 +183,7 @@ void tokenize(const char* src) {
         }
         
         if (*p == '\"' || *p == '\'') {
+            int chr = 0;
             char quote_type = *p;           // Either ' or "
             const char* start = p + 1;      // Skip opening quote
             p++;
@@ -164,10 +195,13 @@ void tokenize(const char* src) {
                 } else {
                     p++;
                 }
+                chr++;
             }
         
             if (*p == quote_type) {
-                add_token(TOKEN_STRING, start, p - start);
+                const char* str = process_str(start, p - start, chr);
+                if (!str) break;
+                add_token(TOKEN_STRING, str, chr);
                 p++; // Skip closing quote
                 continue;
             } else {

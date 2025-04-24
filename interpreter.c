@@ -37,8 +37,11 @@ ASTNode* operate(ASTNode* node){
         case AST_IDENTIFIER: left_val = get_variable(node->operate.left->name); break;
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
-        case AST_BOOLEAN: 
-        case AST_STRING: left_val = node->operate.left->literal; break;
+        case AST_BOOLEAN: left_val = node->operate.left->literal; break;
+        case AST_STRING: 
+            left_val.datatype = node->operate.left->literal.datatype; 
+            left_val.string = strdup(node->operate.left->literal.string);
+            break;
         default: goto type_error;
     }
 
@@ -50,8 +53,11 @@ ASTNode* operate(ASTNode* node){
         case AST_IDENTIFIER: right_val = get_variable(node->operate.right->name); break;
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
-        case AST_BOOLEAN: 
-        case AST_STRING: right_val = node->operate.right->literal; break;
+        case AST_BOOLEAN: right_val = node->operate.right->literal; break;
+        case AST_STRING:
+            right_val.datatype = node->operate.right->literal.datatype; 
+            right_val.string = strdup(node->operate.right->literal.string);
+            break;
         default: goto type_error;
     }
 
@@ -104,8 +110,19 @@ ASTNode* operate(ASTNode* node){
     else if(left_val.datatype == 's' && right_val.datatype == 's'){
         result.datatype = 's';
         if (op == '+'){
-            strcat(left_val.string,right_val.string);
-            result.string = left_val.string;
+            size_t len_l = strlen(left_val.string),
+            len_r = strlen(right_val.string);
+            char *buf = malloc(len_l + len_r + 1);
+            memcpy(buf,              left_val.string, len_l);
+            memcpy(buf + len_l,      right_val.string, len_r);
+            buf[len_l + len_r] = '\0';
+            result.string = buf;
+            if (left_val.owns_str) {
+                free(left_val.string);
+            }
+            if (right_val.owns_str) {
+                free(right_val.string);
+            }
         }else{
             goto type_error;
         }
@@ -173,6 +190,7 @@ void eval(ASTNode* node) {
             case AST_OPERATOR: {
                 ASTNode* temp = operate(node);
                 eval(temp);
+                if(temp->literal.datatype == 's') free(temp->literal.string);
                 free(temp);
                 break;
             }
@@ -195,7 +213,9 @@ void eval(ASTNode* node) {
                         temp2->assign.name=node->assign.name;
                         temp2->assign.value = temp1;
                         eval(temp2);
+                        if(temp1->literal.datatype == 's') free(temp1->literal.string);
                         free(temp1);
+                        if(temp2->literal.datatype == 's') free(temp2->literal.string);
                         free(temp2);
                         break;
                     case AST_IDENTIFIER:

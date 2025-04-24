@@ -10,6 +10,7 @@ typedef struct Literal{
         char* string;// for STRING
         int boolean;// for BOOLEAN
     };
+    int owns_str;
 } Literal;
 
 typedef struct Variable {

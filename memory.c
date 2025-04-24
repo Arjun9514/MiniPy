@@ -16,6 +16,7 @@ void set_variable(const char* name, Literal lit) {
     if(lit.datatype == 's'){
         literal.datatype = 's';
         literal.string = strdup(lit.string);
+        literal.owns_str = 0;
     }else{
         literal = lit;
     }

@@ -13,7 +13,7 @@ extern int error;
 const char* keywords[] = {"exit","print","if","else","True","False","None"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
-int debug = 0;
+int debug = 1;
 
 int interactive(){
     char input[255];
@@ -21,7 +21,10 @@ int interactive(){
         current = 0;
         
         printf(">> ");
-        scanf("%[^\n]%*c",input);
+        if (!fgets(input, sizeof input, stdin)) break;   // EOF or error
+        // strip trailing newline, if any
+        input[strcspn(input, "\r\n")] = '\0';
+        // scanf("%[^\n]%*c",input);
 
         tokenize(input);
 

@@ -14,7 +14,7 @@ extern int error;
 const char* keywords[] = {"exit","print","if","else","True","False","None"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
-int debug = 1;
+int debug = 0;
 
 int interactive(){
     char input[255];
@@ -25,36 +25,27 @@ int interactive(){
         input[strcspn(input, "\r\n")] = '\0';
     
         tokenize(input);
-        if (error) {
-            reset_tokens();
-            error = 0;
-            continue;
-        }
+        
+        if (debug) print_tokens_debug(); //for debugging Tokens
+
         if (strcasecmp(input, "exit") == 0) {
             reset_tokens();
             break;
         }
-    
+
+        if (error) goto end;
+
         if (peek().type != TOKEN_EOF) {
             ASTNode* root = parse_statement();
-            if (error) {
-                ast_free(root);
-                reset_tokens();
-                error = 0;
-                continue;
-            }
+            if (error){ ast_free(root); goto end;}
+            if (debug) print_ast_debug(root,0); //for debugging AST
             eval(root);
             ast_free(root);
-            if (error) {
-                reset_tokens();
-                error = 0;
-                continue;
-            }
-            if (debug) get_variables();
+            if (error) goto end;
+            if (debug) get_variables(); //for debugging Variable Table
         }
-    
-        reset_tokens();
-        error = 0;
+        end:
+            reset_tokens();
     }    
     return 0;
 }

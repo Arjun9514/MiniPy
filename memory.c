@@ -6,7 +6,9 @@
 #include "lexer.h"
 #include "ast.h"
 #include "memory.h"
+#include "error_handling.h"
 #include "interpreter.h"
+// #include "debug_alloc.h"
 
 Variable* symbol_table = NULL;
 
@@ -45,6 +47,9 @@ Literal get_variable(const char* name) {
         }
         var = var->next;
     }
+    char msg[255] = "Undefined variable -> ";
+    strcat(msg,name);
+    raiseError(NAME_ERROR, msg);
     Literal lit;
     lit.datatype = '0';
     return lit;

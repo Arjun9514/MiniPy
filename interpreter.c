@@ -7,6 +7,7 @@
 #include "interpreter.h"
 #include "memory.h"
 #include "error_handling.h"
+// #include "debug_alloc.h"
 
 extern const char* AST_node_name(ASTNodeType type);
 
@@ -34,13 +35,26 @@ ASTNode* operate(ASTNode* node){
         node->operate.left = operate(node->operate.left);
     }
     switch (node->operate.left->type){
-        case AST_IDENTIFIER: left_val = get_variable(node->operate.left->name); break;
+        case AST_IDENTIFIER:
+            Literal lit = get_variable(node->operate.left->name);
+            if (lit.datatype == 's'){
+                left_val.datatype = 's';
+                left_val.string = strdup(lit.string);
+                left_val.owns_str = 1;
+            }else if(lit.datatype == '0'){
+                free(temp);
+                return NULL;
+            }else{
+                left_val = lit;
+            }
+            break;
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
         case AST_BOOLEAN: left_val = node->operate.left->literal; break;
         case AST_STRING: 
-            left_val.datatype = node->operate.left->literal.datatype; 
+            left_val.datatype = 's'; 
             left_val.string = strdup(node->operate.left->literal.string);
+            left_val.owns_str = 1;
             break;
         default: goto type_error;
     }
@@ -50,13 +64,26 @@ ASTNode* operate(ASTNode* node){
         node->operate.right = operate(node->operate.right);
     }
     switch (node->operate.right->type){
-        case AST_IDENTIFIER: right_val = get_variable(node->operate.right->name); break;
+        case AST_IDENTIFIER:
+            Literal lit = get_variable(node->operate.right->name);
+            if (lit.datatype == 's'){
+                right_val.datatype = 's';
+                right_val.string = strdup(lit.string);
+                right_val.owns_str = 1;
+            }else if(lit.datatype == '0'){
+                free(temp);
+                return NULL;
+            }else{
+                right_val = lit;
+            }
+            break;
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
         case AST_BOOLEAN: right_val = node->operate.right->literal; break;
         case AST_STRING:
-            right_val.datatype = node->operate.right->literal.datatype; 
+            right_val.datatype = 's'; 
             right_val.string = strdup(node->operate.right->literal.string);
+            right_val.owns_str = 1;
             break;
         default: goto type_error;
     }
@@ -72,6 +99,8 @@ ASTNode* operate(ASTNode* node){
             default:break;
         }
     }
+
+    result.owns_str = 0;
 
     // Numeric & Boolean operation
     if ((left_val.datatype == 'd' && right_val.datatype == 'd') || 
@@ -107,15 +136,21 @@ ASTNode* operate(ASTNode* node){
         }
     }
     //String operation
-    else if(left_val.datatype == 's' && right_val.datatype == 's'){
+    else if (left_val.datatype == 's' && right_val.datatype == 's') {
         result.datatype = 's';
-        if (op == '+'){
-            size_t len_l = strlen(left_val.string),
-            len_r = strlen(right_val.string);
+        if (op == '+') {
+            printf("[DEBUG] Concatenating '%s' + '%s'\n", left_val.string, right_val.string);
+            size_t len_l = strlen(left_val.string);
+            size_t len_r = strlen(right_val.string);
             char *buf = malloc(len_l + len_r + 1);
-            memcpy(buf,              left_val.string, len_l);
-            memcpy(buf + len_l,      right_val.string, len_r);
-            buf[len_l + len_r] = '\0';
+            if (buf == NULL) {
+                raiseError(MEMORY_ERROR, "Memory allocation failed");
+                return NULL;
+            }
+            memcpy(buf, left_val.string, len_l);
+            memcpy(buf + len_l, right_val.string, len_r);
+            buf[len_l + len_r] = '\0'; // Null-terminate the string
+    
             result.string = buf;
             if (left_val.owns_str) {
                 free(left_val.string);
@@ -123,10 +158,13 @@ ASTNode* operate(ASTNode* node){
             if (right_val.owns_str) {
                 free(right_val.string);
             }
-        }else{
+            result.owns_str = 1;
+            printf("[DEBUG] Concatenated result: '%s'\n", result.string);
+        } else {
             goto type_error;
         }
     }
+    
     else {
         type_error:
             char msg[255];
@@ -175,11 +213,7 @@ void eval(ASTNode* node) {
                 break;
             case AST_IDENTIFIER:{
                 Literal lit = get_variable(node->name);
-                if (lit.datatype != '0'){
-                    print_literal(lit);
-                }else{
-                    goto if_error;
-                }
+                if (lit.datatype != '0') print_literal(lit);
                 break;
             }
 
@@ -189,8 +223,9 @@ void eval(ASTNode* node) {
 
             case AST_OPERATOR: {
                 ASTNode* temp = operate(node);
+                if (!temp) break;
                 eval(temp);
-                if(temp->literal.datatype == 's') free(temp->literal.string);
+                if(temp->literal.owns_str) free(temp->literal.string);
                 free(temp);
                 break;
             }
@@ -208,6 +243,7 @@ void eval(ASTNode* node) {
                 
                     case AST_OPERATOR:
                         ASTNode* temp1 = operate(sub_node);
+                        if(!temp1)break;
                         ASTNode* temp2 = malloc(sizeof(ASTNode));
                         temp2->type = AST_ASSIGNMENT;
                         temp2->assign.name=node->assign.name;
@@ -220,14 +256,7 @@ void eval(ASTNode* node) {
                         break;
                     case AST_IDENTIFIER:
                         Literal lit = get_variable(sub_node->name);
-                        if (lit.datatype != '0'){
-                            set_variable(node->assign.name, lit);
-                        }else{
-                            if_error:
-                                char msg[255] = "Undefined variable -> ";
-                                strcat(msg,node->name);
-                                raiseError(NAME_ERROR, msg);
-                        }
+                        if (lit.datatype != '0') set_variable(node->assign.name, lit);
                         break;
                     default:
                         printf("%s node\n", AST_node_name(sub_node->type));

@@ -4,13 +4,13 @@
 
 typedef struct Literal{
     char datatype;
+    int owns_str;
     union {
         int numeric; // for NUMERIC
         float floating_point; // for FLOATING_POINT
         char* string;// for STRING
         int boolean;// for BOOLEAN
     };
-    int owns_str;
 } Literal;
 
 typedef struct Variable {

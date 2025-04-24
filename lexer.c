@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "error_handling.h"
+// #include "debug_alloc.h"
 
 #define MAX_TOKENS 1000
 

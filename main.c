@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "interpreter.h"
 #include "error_handling.h"
+// #include "debug_alloc.h"
 
 extern int current;
 extern int error;
@@ -17,40 +18,44 @@ int debug = 1;
 
 int interactive(){
     char input[255];
-    do{
+    while (1) {
         current = 0;
-        
         printf(">> ");
-        if (!fgets(input, sizeof input, stdin)) break;   // EOF or error
-        // strip trailing newline, if any
+        if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
-        // scanf("%[^\n]%*c",input);
-
+    
         tokenize(input);
-
-        if (error)goto end;
-        
-        if (debug) print_tokens_debug();//for debugging
-
-        if(strcasecmp(input,"exit") == 0) break;
-
-        while (peek().type != TOKEN_EOF) {
-            ASTNode* root = parse_statement();
-            if (error) goto end;
-
-            if (debug){//for debugging
-                printf("************AST**************\n"); 
-                print_ast_debug(root,0); 
-                printf("*****************************\n");
-            }
-            
-            eval(root);
-            if (error) goto end;
-            ast_free(root);
-            if (debug) get_variables(); // for debugging
+        if (error) {
+            reset_tokens();
+            error = 0;
+            continue;
         }
-        end:reset_tokens();
-    }while(1);
+        if (strcasecmp(input, "exit") == 0) {
+            reset_tokens();
+            break;
+        }
+    
+        if (peek().type != TOKEN_EOF) {
+            ASTNode* root = parse_statement();
+            if (error) {
+                ast_free(root);
+                reset_tokens();
+                error = 0;
+                continue;
+            }
+            eval(root);
+            ast_free(root);
+            if (error) {
+                reset_tokens();
+                error = 0;
+                continue;
+            }
+            if (debug) get_variables();
+        }
+    
+        reset_tokens();
+        error = 0;
+    }    
     return 0;
 }
 

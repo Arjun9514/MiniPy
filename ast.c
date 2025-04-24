@@ -6,6 +6,7 @@
 #include "ast.h"
 #include "interpreter.h"
 #include "error_handling.h"
+// #include "debug_alloc.h"
 
 extern Token* tokens;
 extern int token_count;
@@ -176,7 +177,7 @@ ASTNode* parse_string() {
     if (!node) return NULL;
     node->type = AST_STRING;
     node->literal.datatype = 's';
-    node->literal.string = tok.text;
+    node->literal.string = strdup(tok.text);
     return node;
 }
 

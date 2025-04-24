@@ -46,6 +46,7 @@ typedef struct ASTNode {
 const char* AST_node_name(ASTNodeType type);
 
 void print_ast_debug(ASTNode* node, int indent);
+void ast_free(ASTNode *node);
 
 Token peek();
 Token advance();

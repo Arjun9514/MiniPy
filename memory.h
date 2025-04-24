@@ -22,5 +22,6 @@ extern Variable* symbol_table;
 
 void set_variable(const char* name, Literal literal);
 Literal get_variable(const char* name);
+void get_variables();
 
 #endif

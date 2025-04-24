@@ -3,6 +3,7 @@
 #include <string.h>
 #include "lexer.h"
 #include "ast.h"
+#include "memory.h"
 #include "interpreter.h"
 #include "error_handling.h"
 
@@ -31,17 +32,19 @@ int interactive(){
         if(strcasecmp(input,"exit") == 0) break;
 
         while (peek().type != TOKEN_EOF) {
-            ASTNode* stmt = parse_statement();
+            ASTNode* root = parse_statement();
             if (error) goto end;
 
             if (debug){//for debugging
                 printf("************AST**************\n"); 
-                print_ast_debug(stmt,0); 
+                print_ast_debug(root,0); 
                 printf("*****************************\n");
             }
             
-            eval(stmt);
+            eval(root);
             if (error) goto end;
+            ast_free(root);
+            if (debug) get_variables(); // for debugging
         }
         end:reset_tokens();
     }while(1);

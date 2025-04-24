@@ -172,7 +172,9 @@ void eval(ASTNode* node) {
 
             case AST_OPERATOR: {
                 ASTNode* temp = operate(node);
-                eval(temp);break;
+                eval(temp);
+                free(temp);
+                break;
             }
 
             case AST_ASSIGNMENT:{
@@ -193,6 +195,8 @@ void eval(ASTNode* node) {
                         temp2->assign.name=node->assign.name;
                         temp2->assign.value = temp1;
                         eval(temp2);
+                        free(temp1);
+                        free(temp2);
                         break;
                     case AST_IDENTIFIER:
                         Literal lit = get_variable(sub_node->name);

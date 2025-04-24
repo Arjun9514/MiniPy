@@ -4,6 +4,7 @@
 #include <string.h>
 #include "lexer.h"
 #include "ast.h"
+#include "interpreter.h"
 #include "error_handling.h"
 
 extern Token* tokens;
@@ -60,24 +61,71 @@ int match(TokenType type){
 
 void print_ast_debug(ASTNode* node, int indent) {
     for (int i = 0; i < indent; i++) printf("|-");
-    printf("%s", AST_node_name(node->type));
-    if (node->type == AST_OPERATOR) {
-        printf(" '%c'\n", node->operate.op);
-        print_ast_debug(node->operate.left, indent + 1);
-        print_ast_debug(node->operate.right, indent + 1);
-    } else if (node->type == AST_NUMERIC) {
-        printf(" %c %d\n", node->literal.datatype, node->literal.numeric);
-    } else if (node->type == AST_FLOATING_POINT) {
-        printf(" %c %f\n", node->literal.datatype, node->literal.floating_point);
-    } else if (node->type == AST_BOOLEAN) {
-        printf(" %c %d\n", node->literal.datatype, node->literal.boolean);
-    } else if (node->type == AST_STRING) {
-        printf(" %c \"%s\"\n", node->literal.datatype, node->literal.string);
-    } else if (node->type == AST_IDENTIFIER) {
-        printf(" %s\n", node->name);
-    } else {
-        printf("\n");
+    printf("%s ", AST_node_name(node->type));
+    switch (node->type){
+        case AST_OPERATOR:
+            printf(" '%c'\n", node->operate.op);
+            print_ast_debug(node->operate.left, indent + 1);
+            print_ast_debug(node->operate.right, indent + 1);
+            break;
+        case AST_NUMERIC:
+        case AST_FLOATING_POINT:
+        case AST_BOOLEAN:
+        case AST_STRING:
+            print_literal(node->literal);break;
+        case AST_IDENTIFIER:
+            printf(" %s\n", node->name);break;
+        case AST_ASSIGNMENT:
+            printf("\n");
+            print_ast_debug(node->assign.value, indent+1);
+            break;
+    default:
+        break;
     }
+}
+
+void ast_free(ASTNode *node);
+
+void ast_free(ASTNode *node) {
+    if (!node) return;
+
+    switch (node->type) {
+        case AST_IDENTIFIER:
+            free(node->name);
+            break;
+
+        case AST_NUMERIC:
+        case AST_FLOATING_POINT:
+        case AST_BOOLEAN:
+            // No heap allocations inside these literal types.
+            break;
+
+        case AST_STRING:
+            // The literal.string was malloc'd by process_str/strdup.
+            free(node->literal.string);
+            break;
+
+        case AST_OPERATOR:
+            ast_free(node->operate.left);
+            ast_free(node->operate.right);
+            break;
+
+        case AST_ASSIGNMENT:
+            free(node->assign.name);
+            free(node->assign.value);
+            break;
+
+        case AST_KEYWORD:
+            free(node->keyword.key);
+            ast_free(node->keyword.value);
+            break;
+        // If you have other node types, handle them here.
+        default:
+            break;
+    }
+
+    // Finally, free the node itself.
+    free(node);
 }
 
 ASTNode* parse_none() {

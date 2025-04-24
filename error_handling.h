@@ -10,6 +10,7 @@ typedef enum{
     VALUE_ERROR,
     LITERAL_ERROR,
     ASSIGNMENT_ERROR,
+    MEMORY_ERROR,
 }ErrorType;
 
 void raiseError(ErrorType type, char* error_msg);

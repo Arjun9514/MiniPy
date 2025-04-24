@@ -13,6 +13,7 @@ const char* error_name(ErrorType type) {
         case ZERO_DIVISION_ERROR: return "Zero Division Error";
         case LITERAL_ERROR: return "Literal Error";
         case ASSIGNMENT_ERROR: return "Assignment Error";
+        case MEMORY_ERROR: return "Memory Error";
         default: return "Unknown Error";
     }
 }

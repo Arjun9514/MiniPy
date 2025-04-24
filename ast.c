@@ -128,9 +128,19 @@ void ast_free(ASTNode *node) {
     free(node);
 }
 
+ASTNode* new_node(){
+    ASTNode* node = malloc(sizeof(ASTNode));
+    if (!node) {
+        raiseError(MEMORY_ERROR, "Out of memory");
+        return NULL;
+    }
+    return node;
+}
+
 ASTNode* parse_none() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_NONE;
     node->literal.datatype = 'n';
     return node;
@@ -138,7 +148,8 @@ ASTNode* parse_none() {
 
 ASTNode* parse_numeric() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_NUMERIC;
     char *end;
     int val = (int)strtol(tok.text, &end, 10);
@@ -149,7 +160,8 @@ ASTNode* parse_numeric() {
 
 ASTNode* parse_floating_point() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_FLOATING_POINT;
     char *end;
     float val = strtof(tok.text, &end);
@@ -160,7 +172,8 @@ ASTNode* parse_floating_point() {
 
 ASTNode* parse_string() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_STRING;
     node->literal.datatype = 's';
     node->literal.string = tok.text;
@@ -169,7 +182,8 @@ ASTNode* parse_string() {
 
 ASTNode* parse_boolean() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     char* end;
     node->type = AST_BOOLEAN;
     node->literal.datatype = 'b';
@@ -183,7 +197,8 @@ ASTNode* parse_boolean() {
 
 ASTNode* parse_identifier() {
     Token tok = advance();
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_IDENTIFIER;
     node->name = strdup(tok.text);
     return node;
@@ -191,14 +206,11 @@ ASTNode* parse_identifier() {
 
 ASTNode* parse_paren() {
     advance();//consume '(' token
-    int start = current;
-    ASTNode* node = malloc(sizeof(ASTNode));
-    while(peek().type != TOKEN_RPAREN){
-        if (peek().type == TOKEN_EOF){
-            raiseError(SYNTAX_ERROR, "Missing brackets");
-            return NULL;
-        }
-        node = parse_expression();
+    ASTNode* node = parse_expression();
+    if (!node) return NULL;
+    if (peek().type != TOKEN_RPAREN) {
+        raiseError(SYNTAX_ERROR, "Unmatched '('");
+        return NULL;
     }
     advance();//consume ')' token
     return node;
@@ -245,7 +257,8 @@ ASTNode* parse_expression_prec(int min_prec) {
             return NULL;
         }
 
-        ASTNode* node = malloc(sizeof(ASTNode));
+        ASTNode* node = new_node();
+    if (!node) return NULL;
         node->type = AST_OPERATOR;
         node->operate.op = op;
         node->operate.left = left;
@@ -262,7 +275,8 @@ ASTNode* parse_assignment() {
 
     ASTNode* value = parse_expression();
 
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_ASSIGNMENT;
     node->assign.name = name;
     node->assign.value = value;
@@ -275,7 +289,8 @@ ASTNode* parse_keyword() {
     match(TOKEN_LPAREN);
     ASTNode* val = parse_expression();
     match(TOKEN_RPAREN);
-    ASTNode* node = malloc(sizeof(ASTNode));
+    ASTNode* node = new_node();
+    if (!node) return NULL;
     node->type = AST_KEYWORD;
     node->keyword.key = strdup(key);
     node->keyword.value = val;

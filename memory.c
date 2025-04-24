@@ -21,6 +21,7 @@ void set_variable(const char* name, Literal lit) {
     }
     while (var != NULL) {
         if (strcmp(var->name, name) == 0) {
+            if(var->literal.datatype == 's') free(var->literal.string);
             var->literal = literal;
             return;
         }

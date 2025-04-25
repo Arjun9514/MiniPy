@@ -1,5 +1,6 @@
 //error_handling.c
 #include <stdio.h>
+#include "colors.h"
 #include "error_handling.h"
 
 int error = 0;
@@ -20,6 +21,6 @@ const char* error_name(ErrorType type) {
 }
 
 void raiseError(ErrorType type, char* error_msg){
-    printf("%s: %s\n",error_name(type),error_msg);
+    printf(RED "%s" RESET ": " RED "%s\n" RESET, error_name(type), error_msg);
     error = 1;
 }

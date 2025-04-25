@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "memory.h"
 #include "interpreter.h"
+#include "colors.h"
 #include "error_handling.h"
 // #include "debug_alloc.h"
 
@@ -20,7 +21,7 @@ int interactive(){
     char input[255];
     while (1) {
         current = 0;
-        printf(">> ");
+        printf(MAG ">>> " RESET);
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
     

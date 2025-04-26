@@ -13,7 +13,7 @@ typedef enum {
     AST_IDENTIFIER,
     AST_OPERATOR,
     AST_ASSIGNMENT,
-    AST_KEYWORD
+    AST_PRINT,
 } ASTNodeType;
 
 typedef struct ASTNode {
@@ -35,10 +35,10 @@ typedef struct ASTNode {
             struct ASTNode* value;
         } assign;
 
-        struct { // for AST_KEYWORD
+        struct { // for AST_PRINT
             char* key;
             struct ASTNode* value;
-        } keyword;
+        } print;
     };
 
 } ASTNode;

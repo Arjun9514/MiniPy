@@ -35,7 +35,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_IDENTIFIER: return "IDENTIFIER";
         case AST_OPERATOR: return "OPERATOR";
         case AST_ASSIGNMENT: return "ASSIGN";
-        case AST_KEYWORD: return "KEYWORD";
+        case AST_PRINT: return "PRINT";
         default: return "UNKNOWN";
     }
 }
@@ -104,9 +104,9 @@ void ast_free(ASTNode *node) {
             free(node->assign.value);
             break;
 
-        case AST_KEYWORD:
-            free(node->keyword.key);
-            ast_free(node->keyword.value);
+        case AST_PRINT:
+            free(node->print.key);
+            ast_free(node->print.value);
             break;
         // If you have other node types, handle them here.
         default:
@@ -286,17 +286,19 @@ ASTNode* parse_assignment() {
 
 ASTNode* parse_keyword() {
     char* key = strdup(advance().text);// skip 'keyword' and get the keyword
-    if (peek().type == TOKEN_LPAREN){
-        ASTNode* val = parse_paren();
-        ASTNode* node = new_node();
-        if (!node) return NULL;
-        node->type = AST_KEYWORD;
-        node->keyword.key = strdup(key);
-        node->keyword.value = val;
-        return node;
-    }else{
-        raiseError(SYNTAX_ERROR, "Missing brackets");
-        return NULL;
+    if (strcasecmp(key, "print") == 0){
+        if (peek().type == TOKEN_LPAREN){
+            ASTNode* val = parse_paren();
+            ASTNode* node = new_node();
+            if (!node) return NULL;
+            node->type = AST_PRINT;
+            node->print.key = strdup(key);
+            node->print.value = val;
+            return node;
+        }else{
+            raiseError(SYNTAX_ERROR, "Missing brackets");
+            return NULL;
+        }
     }
 }
 

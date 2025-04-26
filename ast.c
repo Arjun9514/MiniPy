@@ -25,10 +25,6 @@ int get_precedence(char op) {
     }
 }
 
-char* get_key(){
-    return tokens[current-1].text;
-}
-
 const char* AST_node_name(ASTNodeType type) {
     switch (type) {
         case AST_NONE: return "NONE";
@@ -50,14 +46,6 @@ Token peek(){
 
 Token advance(){
     return tokens[current++];
-}
-
-int match(TokenType type){
-    if(tokens[current].type == type){
-        current++;
-        return 1;
-    }
-    return 0;
 }
 
 void print_ast_debug(ASTNode* node, int indent) {
@@ -297,24 +285,24 @@ ASTNode* parse_assignment() {
 }
 
 ASTNode* parse_keyword() {
-    match(TOKEN_KEYWORD); // skip 'keyword'
-    char* key = get_key();
-    match(TOKEN_LPAREN);
-    ASTNode* val = parse_expression();
-    match(TOKEN_RPAREN);
-    ASTNode* node = new_node();
-    if (!node) return NULL;
-    node->type = AST_KEYWORD;
-    node->keyword.key = strdup(key);
-    node->keyword.value = val;
-    return node;
+    char* key = strdup(advance().text);// skip 'keyword' and get the keyword
+    if (peek().type == TOKEN_LPAREN){
+        ASTNode* val = parse_paren();
+        ASTNode* node = new_node();
+        if (!node) return NULL;
+        node->type = AST_KEYWORD;
+        node->keyword.key = strdup(key);
+        node->keyword.value = val;
+        return node;
+    }else{
+        raiseError(SYNTAX_ERROR, "Missing brackets");
+        return NULL;
+    }
 }
 
 ASTNode* parse_statement() {
-    for (int i = 0; i < num_keywords; i++) {
-        if (peek().type == TOKEN_KEYWORD && strcmp(peek().text, keywords[i]) == 0) {
-            return parse_keyword();
-        }
+    if (peek().type == TOKEN_KEYWORD) {
+        return parse_keyword();
     }
     if (peek().type == TOKEN_IDENTIFIER && tokens[current + 1].type == TOKEN_ASSIGN) {
         return parse_assignment();

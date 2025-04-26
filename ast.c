@@ -240,8 +240,20 @@ ASTNode* parse_expression() {
 ASTNode* parse_expression_prec(int min_prec) {
     ASTNode* left = parse_primary();
     if (!left){
-        raiseError(SYNTAX_ERROR, "Missing left operand");
-        return NULL;
+        if(peek().type == TOKEN_OPERATOR){
+            if(peek().text[0] == '+' || peek().text[0] == '-'){
+                left = new_node();
+                left->type = AST_NUMERIC;
+                left->literal.datatype = 'd';
+                left->literal.numeric = 0;
+            }else{
+                goto syntax_error;
+            }
+        }else{
+            syntax_error:
+                raiseError(SYNTAX_ERROR, "Missing left operand");
+                return NULL;
+        }
     }
     while (peek().type == TOKEN_OPERATOR) {
         char op = peek().text[0];

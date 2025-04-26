@@ -139,7 +139,7 @@ ASTNode* operate(ASTNode* node){
     else if (left_val.datatype == 's' && right_val.datatype == 's') {
         result.datatype = 's';
         if (op == '+') {
-            printf("[DEBUG] Concatenating '%s' + '%s'\n", left_val.string, right_val.string);
+            // printf("[DEBUG] Concatenating '%s' + '%s'\n", left_val.string, right_val.string);
             size_t len_l = strlen(left_val.string);
             size_t len_r = strlen(right_val.string);
             char *buf = malloc(len_l + len_r + 1);
@@ -159,7 +159,7 @@ ASTNode* operate(ASTNode* node){
                 free(right_val.string);
             }
             result.owns_str = 1;
-            printf("[DEBUG] Concatenated result: '%s'\n", result.string);
+            // printf("[DEBUG] Concatenated result: '%s'\n", result.string);
         } else {
             goto type_error;
         }
@@ -168,11 +168,19 @@ ASTNode* operate(ASTNode* node){
     else {
         type_error:
             char msg[255];
+            if (left_val.owns_str) {
+                free(left_val.string);
+            }
+            if (right_val.owns_str) {
+                free(right_val.string);
+            }
             sprintf(msg, "Unsupported operand type(s) for \'%c\': \'%c\' and \'%c\'", op, left_val.datatype, right_val.datatype);
             raiseError(TYPE_ERROR, msg);
+            free(temp);
             return NULL;
         zero_division_error:
             raiseError(ZERO_DIVISION_ERROR, "Division by zero");
+            free(temp);
             return NULL;
         //Comparative Operation
         comparative_operation: 

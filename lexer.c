@@ -13,6 +13,7 @@ Token* tokens;
 int token_count = 0;
 
 extern int error;
+extern int debug;
 
 extern char *keywords[];
 extern const int num_keywords;
@@ -79,7 +80,6 @@ int is_none(const char* str) {
 }
 
 void print_tokens_debug(){
-    printf("***********Tokens************\n");
     for (int i = 0; i < token_count; i++) {
         printf("%s(%s)\n", token_name(tokens[i].type), tokens[i].text);
     }
@@ -141,6 +141,16 @@ void tokenize(const char* src) {
                     add_token(TOKEN_BOOLEAN, start, len);
                 }else if (is_none(strndup(start, len))){
                     add_token(TOKEN_NONE, start, len);
+                }else if(strcasecmp(strndup(start,len),"debug") == 0){
+                    p++;
+                    switch (*p){
+                    case '1': debug = 1; break;
+                    case '0': debug = 0; break;
+                    default:    
+                        raiseError(SYNTAX_ERROR, "Improper command parameters");
+                        break;
+                    }    
+                    break;
                 }else{
                     add_token(TOKEN_KEYWORD, start, len);
                 }

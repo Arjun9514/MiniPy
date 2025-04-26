@@ -36,6 +36,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_OPERATOR: return "OPERATOR";
         case AST_ASSIGNMENT: return "ASSIGN";
         case AST_PRINT: return "PRINT";
+        case AST_IF: return "IF";
         default: return "UNKNOWN";
     }
 }
@@ -61,9 +62,15 @@ void print_ast_debug(ASTNode* node, int indent) {
         case AST_FLOATING_POINT:
         case AST_BOOLEAN:
         case AST_STRING:
-            print_literal(node->literal);break;
+            print_literal(node->literal); break;
         case AST_IDENTIFIER:
-            printf(" %s\n", node->name);break;
+            printf(" %s\n", node->name); break;
+        case AST_PRINT:
+            printf("\n");
+            print_ast_debug(node->print.value, indent + 1); break;
+        case AST_IF:
+            printf("\n");
+            print_ast_debug(node->if_else.condition, indent + 1); break;
         case AST_ASSIGNMENT:
             printf("\n");
             print_ast_debug(node->assign.value, indent+1);
@@ -105,8 +112,11 @@ void ast_free(ASTNode *node) {
             break;
 
         case AST_PRINT:
-            free(node->print.key);
             ast_free(node->print.value);
+            break;
+
+        case AST_IF:
+            ast_free(node->if_else.condition);
             break;
         // If you have other node types, handle them here.
         default:
@@ -215,6 +225,8 @@ ASTNode* parse_primary() {
         case TOKEN_BOOLEAN: return parse_boolean();
         case TOKEN_IDENTIFIER: return parse_identifier();
         case TOKEN_LPAREN: return parse_paren();
+        case TOKEN_SEMICOLON: return NULL;
+        case TOKEN_COLON: return NULL;
         default: return NULL;
     }
 }
@@ -292,13 +304,23 @@ ASTNode* parse_keyword() {
             ASTNode* node = new_node();
             if (!node) return NULL;
             node->type = AST_PRINT;
-            node->print.key = strdup(key);
             node->print.value = val;
             return node;
         }else{
             raiseError(SYNTAX_ERROR, "Missing brackets");
             return NULL;
         }
+    }else if (strcasecmp(key, "if") == 0){
+        ASTNode* node = new_node();
+        if (!node) return NULL;
+        ASTNode* condition = parse_expression();
+        if (!condition) return NULL;
+        node->type = AST_IF;
+        node->if_else.condition = condition;
+        if (advance().type == TOKEN_COLON) return node;
+        ast_free(node);
+        raiseError(SYNTAX_ERROR, "Missing colon");
+        return NULL;
     }
 }
 

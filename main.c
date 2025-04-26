@@ -12,10 +12,10 @@
 extern int current;
 extern int error;
 
-const char* keywords[] = {"exit","print","if","else","True","False","None"}; 
+const char* keywords[] = {"exit","print","if","else","True","False","None","debug"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
-int debug = 0;
+int debug = 1;
 
 int interactive(){
     char input[255];
@@ -27,7 +27,7 @@ int interactive(){
     
         tokenize(input);
         
-        if (debug) print_tokens_debug(); //for debugging Tokens
+        if (debug){ printf("Tokens:\n"); print_tokens_debug();} //for debugging Tokens
 
         if (strcasecmp(input, "exit") == 0) {
             reset_tokens();
@@ -36,14 +36,15 @@ int interactive(){
 
         if (error) goto end;
 
-        if (peek().type != TOKEN_EOF) {
+        while (peek().type != TOKEN_EOF) {
+            if (peek().type == TOKEN_SEMICOLON){ current++; continue;}
             ASTNode* root = parse_statement();
             if (error){ ast_free(root); goto end;}
-            if (debug) print_ast_debug(root,0); //for debugging AST
-            eval(root);
+            if (debug){ printf("\nAST:\n"); print_ast_debug(root,0);} //for debugging AST
+            // eval(root);
             ast_free(root);
-            if (error) goto end;
-            if (debug) get_variables(); //for debugging Variable Table
+            // if (error) goto end;
+            // if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
         }
         end:
             reset_tokens();

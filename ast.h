@@ -14,6 +14,7 @@ typedef enum {
     AST_OPERATOR,
     AST_ASSIGNMENT,
     AST_PRINT,
+    AST_IF,
 } ASTNodeType;
 
 typedef struct ASTNode {
@@ -36,9 +37,12 @@ typedef struct ASTNode {
         } assign;
 
         struct { // for AST_PRINT
-            char* key;
             struct ASTNode* value;
         } print;
+
+        struct { // for AST_IF
+            struct ASTNode* condition;
+        } if_else;
     };
 
 } ASTNode;

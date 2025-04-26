@@ -226,7 +226,6 @@ void eval(ASTNode* node) {
             }
 
             case AST_PRINT:
-                //printf("key->%s\n",node->keyword.key);
                 eval(node->print.value); break;
 
             case AST_OPERATOR: {

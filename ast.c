@@ -166,6 +166,7 @@ void ast_free(ASTNode *node) {
     }
 
     // Finally, free the node itself.
+    // print_allocations();
     free(node);
 }
 
@@ -346,12 +347,11 @@ ASTNode* block(int indent) {
     block_node->block.count = 0;
 
     char input[255];
+    reset_tokens();
 
     while (1) {
         printf(MAG "... " RESET);
-        for (int i = 0; i < indent; i++) {
-            printf("    ");
-        }
+        for (int i = 0; i < indent; i++) printf("    ");
 
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
@@ -362,13 +362,20 @@ ASTNode* block(int indent) {
                 indent--;
                 continue;
             }else{
-                break;
+                if (block_node->block.count == 0){
+                    indent++;
+                    continue;
+                }else{
+                    allocate_tokens();
+                    add_token(TOKEN_EOF, "", 0);
+                    break;
+                }
             }
         }
-
-        reset_tokens();
+        
         allocate_tokens();
         tokenize(input);
+        
         if (debug){ printf("Tokens:\n"); print_tokens_debug();}
         if (error) {
             reset_tokens();

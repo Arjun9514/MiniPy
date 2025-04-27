@@ -34,6 +34,8 @@ char* strndup(const char* s, size_t n);
 
 void print_tokens_debug();
 
+void add_token(TokenType type, const char* start, int length);
+
 void allocate_tokens();
 
 void reset_tokens();

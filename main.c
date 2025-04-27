@@ -14,7 +14,7 @@ extern int error;
 const char* keywords[] = {"exit","print","if","else","True","False","None","debug"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
-int debug = 1;
+int debug = 0;
 
 int interactive(){
     char input[255];
@@ -23,6 +23,8 @@ int interactive(){
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
         
+        if (strlen(input) == 0) continue;
+
         allocate_tokens();
         tokenize(input);
         

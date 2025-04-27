@@ -141,12 +141,13 @@ void tokenize(const char* src) {
             const char* start = p;
             while (isalnum(*p) || *p == '_') p++;
             int len = p - start;
-            if (is_keyword(strndup(start, len))) {
-                if (is_bool(strndup(start, len))){
+            char* str = strndup(start, len);
+            if (is_keyword(str)) {
+                if (is_bool(str)){
                     add_token(TOKEN_BOOLEAN, start, len);
-                }else if (is_none(strndup(start, len))){
+                }else if (is_none(str)){
                     add_token(TOKEN_NONE, start, len);
-                }else if(strcasecmp(strndup(start,len),"debug") == 0){
+                }else if(strcasecmp(str,"debug") == 0){
                     p++;
                     switch (*p){
                     case '1': debug = 1; break;
@@ -162,6 +163,7 @@ void tokenize(const char* src) {
             } else {
                 add_token(TOKEN_IDENTIFIER, start, len);
             }
+            free(str);
             continue;
         }
 

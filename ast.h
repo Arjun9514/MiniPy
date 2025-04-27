@@ -18,6 +18,7 @@ typedef enum {
     AST_ASSIGNMENT,
     AST_PRINT,
     AST_IF,
+    AST_ELSE,
 } ASTNodeType;
 
 typedef struct ASTNode {
@@ -51,6 +52,7 @@ typedef struct ASTNode {
         struct { // for AST_IF
             struct ASTNode* condition;
             struct ASTNode* code;
+            struct ASTNode* next;
         } if_else;
     };
 

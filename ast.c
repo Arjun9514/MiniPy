@@ -19,6 +19,7 @@ extern int error;
 extern int debug;
 
 int current = 0;
+int global_indent = 0;
 
 int get_precedence(char op) {
     switch (op) {
@@ -57,15 +58,14 @@ Token advance(){
 void print_ast_debug(ASTNode* node, int indent, int is_last) {
     if (!node) return;
 
-    // Print branches
+    // Print branch lines
     for (int i = 0; i < indent - 1; i++) {
-        printf("%c   ",179); // '|' is in 179
+        printf("%c   ", 179); // '│'
     }
     if (indent > 0) {
-        printf("%c%c ", is_last ? 192 : 195, 196);
+        printf("%c%c ", is_last ? 192 : 195, 196); // '└─' or '├─'
     }
-
-    // Print node
+    
     printf("%s", AST_node_name(node->type));
 
     switch (node->type) {
@@ -74,6 +74,7 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             print_ast_debug(node->operate.left, indent + 1, 0);
             print_ast_debug(node->operate.right, indent + 1, 1);
             break;
+
         case AST_NUMERIC:
         case AST_FLOATING_POINT:
         case AST_BOOLEAN:
@@ -81,15 +82,24 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             printf(" ");
             print_literal(node->literal);
             break;
+
         case AST_IDENTIFIER:
             printf(" %s\n", node->name);
             break;
+
         case AST_PRINT:
             printf("\n");
             print_ast_debug(node->print.value, indent + 1, 1);
             break;
+
+        case AST_ASSIGNMENT:
+            printf("\n");
+            print_ast_debug(node->assign.value, indent + 1, 1);
+            break;
+
         case AST_IF:
             printf("\n");
+            for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [IF_CONDITION]\n", 195, 196);
             print_ast_debug(node->if_else.condition, indent + 2, 1);
 
@@ -97,17 +107,25 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             printf("%c%c [IF_BODY]\n", 195, 196);
             print_ast_debug(node->if_else.code, indent + 2, 1);
 
+            if (node->if_else.next) {
+                for (int i = 0; i < indent; i++) printf("%c   ", 179);
+                printf("%c%c [ELSE]\n", 195, 196);
+                print_ast_debug(node->if_else.next->if_else.code, indent + 2, 1);
+            }
             break;
-        case AST_ASSIGNMENT:
+
+        case AST_ELSE:
             printf("\n");
-            print_ast_debug(node->assign.value, indent + 1, 1);
+            print_ast_debug(node->if_else.code, indent + 1, 1);
             break;
+
         case AST_BLOCK:
             printf("\n");
             for (int i = 0; i < node->block.count; i++) {
                 print_ast_debug(node->block.statements[i], indent + 1, (i == node->block.count - 1));
             }
             break;
+
         default:
             printf("\n");
             break;
@@ -151,6 +169,10 @@ void ast_free(ASTNode *node) {
 
         case AST_IF:
             ast_free(node->if_else.condition);
+            ast_free(node->if_else.code);
+            break;
+
+        case AST_ELSE:
             ast_free(node->if_else.code);
             break;
 
@@ -339,7 +361,7 @@ ASTNode* parse_assignment() {
     return node;
 }
 
-ASTNode* block(int indent) {
+ASTNode* block(ASTNode* parent_if, int parent_indent){
     ASTNode* block_node = new_node();
     if (!block_node) return NULL;
     block_node->type = AST_BLOCK;
@@ -351,19 +373,19 @@ ASTNode* block(int indent) {
 
     while (1) {
         printf(MAG "... " RESET);
-        for (int i = 0; i < indent; i++) printf("    ");
+        for (int i = 0; i < global_indent; i++) printf("    ");
 
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
 
         // Check empty line -> end of block
         if (strlen(input) == 0) {
-            if (indent > 0){
-                indent--;
+            if (global_indent > parent_indent){
+                global_indent--;
                 continue;
             }else{
-                if (block_node->block.count == 0){
-                    indent++;
+                if (block_node->block.count == parent_indent){
+                    global_indent++;
                     continue;
                 }else{
                     allocate_tokens();
@@ -389,14 +411,26 @@ ASTNode* block(int indent) {
             ast_free(block_node);
             return NULL;
         }
-
-        // Add stmt to block_node's statements array
-        block_node->block.count++;
-        block_node->block.statements = realloc(
-            block_node->block.statements,
-            sizeof(ASTNode*) * block_node->block.count
-        );
-        block_node->block.statements[block_node->block.count - 1] = stmt;
+        
+        if (stmt->type == AST_ELSE) {
+            if (parent_if && parent_if->type == AST_IF && global_indent == parent_indent) {
+                parent_if->if_else.next = stmt; // connect ELSE to IF
+                break;
+            } else {
+                ast_free(stmt);
+                ast_free(block_node);
+                raiseError(SYNTAX_ERROR, "Else without matching If");
+                return NULL;
+            }
+        } else {
+            // Normal statement
+            block_node->block.count++;
+            block_node->block.statements = realloc(
+                block_node->block.statements,
+                sizeof(ASTNode*) * block_node->block.count
+            );
+            block_node->block.statements[block_node->block.count - 1] = stmt;
+        }
 
         reset_tokens();
     }
@@ -418,16 +452,35 @@ ASTNode* parse_keyword() {
             return NULL;
         }
     }else if (strcasecmp(key, "if") == 0){
+        global_indent++;
         ASTNode* node = new_node();
         if (!node) return NULL;
         ASTNode* condition = parse_expression();
         if (!condition) return NULL;
         node->type = AST_IF;
         node->if_else.condition = condition;
+        node->if_else.code = NULL;
+        node->if_else.next = NULL;
         if (advance().type == TOKEN_COLON){
             if(peek().type == TOKEN_EOF){
                 advance();
-                node->if_else.code = block(1);
+                node->if_else.code = block(node, global_indent-1);
+                return node;
+            }
+        }
+        ast_free(node);
+        raiseError(SYNTAX_ERROR, "Missing colon");
+        return NULL;
+    }else if (strcasecmp(key, "else") == 0){
+        global_indent++;
+        ASTNode* node = new_node();
+        if (!node) return NULL;
+        node->type = AST_ELSE;
+        node->if_else.code = NULL;
+        if (advance().type == TOKEN_COLON){
+            if(peek().type == TOKEN_EOF){
+                advance();
+                node->if_else.code = block(node, global_indent-1);
                 return node;
             }
         }

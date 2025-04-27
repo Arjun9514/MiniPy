@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "ast.h"
 #include "interpreter.h"
+#include "colors.h"
 #include "error_handling.h"
 // #include "debug_alloc.h"
 
@@ -13,6 +14,9 @@ extern int token_count;
 
 extern char *keywords[];
 extern const int num_keywords;
+
+extern int error;
+extern int debug;
 
 int current = 0;
 
@@ -37,6 +41,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_ASSIGNMENT: return "ASSIGN";
         case AST_PRINT: return "PRINT";
         case AST_IF: return "IF";
+        case AST_BLOCK: return "BLOCK";
         default: return "UNKNOWN";
     }
 }
@@ -49,34 +54,63 @@ Token advance(){
     return tokens[current++];
 }
 
-void print_ast_debug(ASTNode* node, int indent) {
-    for (int i = 0; i < indent; i++) printf("|-");
-    printf("%s ", AST_node_name(node->type));
-    switch (node->type){
+void print_ast_debug(ASTNode* node, int indent, int is_last) {
+    if (!node) return;
+
+    // Print branches
+    for (int i = 0; i < indent - 1; i++) {
+        printf("%c   ",179); // '|' is in 179
+    }
+    if (indent > 0) {
+        printf("%c%c ", is_last ? 192 : 195, 196);
+    }
+
+    // Print node
+    printf("%s", AST_node_name(node->type));
+
+    switch (node->type) {
         case AST_OPERATOR:
             printf(" '%c'\n", node->operate.op);
-            print_ast_debug(node->operate.left, indent + 1);
-            print_ast_debug(node->operate.right, indent + 1);
+            print_ast_debug(node->operate.left, indent + 1, 0);
+            print_ast_debug(node->operate.right, indent + 1, 1);
             break;
         case AST_NUMERIC:
         case AST_FLOATING_POINT:
         case AST_BOOLEAN:
         case AST_STRING:
-            print_literal(node->literal); break;
+            printf(" ");
+            print_literal(node->literal);
+            break;
         case AST_IDENTIFIER:
-            printf(" %s\n", node->name); break;
+            printf(" %s\n", node->name);
+            break;
         case AST_PRINT:
             printf("\n");
-            print_ast_debug(node->print.value, indent + 1); break;
+            print_ast_debug(node->print.value, indent + 1, 1);
+            break;
         case AST_IF:
             printf("\n");
-            print_ast_debug(node->if_else.condition, indent + 1); break;
+            printf("%c%c [IF_CONDITION]\n", 195, 196);
+            print_ast_debug(node->if_else.condition, indent + 2, 1);
+
+            for (int i = 0; i < indent; i++) printf("%c   ", 179);
+            printf("%c%c [IF_BODY]\n", 195, 196);
+            print_ast_debug(node->if_else.code, indent + 2, 1);
+
+            break;
         case AST_ASSIGNMENT:
             printf("\n");
-            print_ast_debug(node->assign.value, indent+1);
+            print_ast_debug(node->assign.value, indent + 1, 1);
             break;
-    default:
-        break;
+        case AST_BLOCK:
+            printf("\n");
+            for (int i = 0; i < node->block.count; i++) {
+                print_ast_debug(node->block.statements[i], indent + 1, (i == node->block.count - 1));
+            }
+            break;
+        default:
+            printf("\n");
+            break;
     }
 }
 
@@ -108,7 +142,7 @@ void ast_free(ASTNode *node) {
 
         case AST_ASSIGNMENT:
             free(node->assign.name);
-            free(node->assign.value);
+            ast_free(node->assign.value);
             break;
 
         case AST_PRINT:
@@ -117,8 +151,16 @@ void ast_free(ASTNode *node) {
 
         case AST_IF:
             ast_free(node->if_else.condition);
+            ast_free(node->if_else.code);
             break;
-        // If you have other node types, handle them here.
+
+        case AST_BLOCK:
+            for (int i = 0; i < node->block.count; i++) {
+                ast_free(node->block.statements[i]);
+            }
+            free(node->block.statements);
+            break;
+
         default:
             break;
     }
@@ -296,6 +338,64 @@ ASTNode* parse_assignment() {
     return node;
 }
 
+ASTNode* block(int indent) {
+    ASTNode* block_node = new_node();
+    if (!block_node) return NULL;
+    block_node->type = AST_BLOCK;
+    block_node->block.statements = NULL;
+    block_node->block.count = 0;
+
+    char input[255];
+
+    while (1) {
+        printf(MAG "... " RESET);
+        for (int i = 0; i < indent; i++) {
+            printf("    ");
+        }
+
+        if (!fgets(input, sizeof input, stdin)) break;
+        input[strcspn(input, "\r\n")] = '\0';
+
+        // Check empty line -> end of block
+        if (strlen(input) == 0) {
+            if (indent > 0){
+                indent--;
+                continue;
+            }else{
+                break;
+            }
+        }
+
+        reset_tokens();
+        allocate_tokens();
+        tokenize(input);
+        if (debug){ printf("Tokens:\n"); print_tokens_debug();}
+        if (error) {
+            reset_tokens();
+            ast_free(block_node);
+            return NULL;
+        }
+
+        ASTNode* stmt = parse_statement();
+        if (!stmt) {
+            reset_tokens();
+            ast_free(block_node);
+            return NULL;
+        }
+
+        // Add stmt to block_node's statements array
+        block_node->block.count++;
+        block_node->block.statements = realloc(
+            block_node->block.statements,
+            sizeof(ASTNode*) * block_node->block.count
+        );
+        block_node->block.statements[block_node->block.count - 1] = stmt;
+
+        reset_tokens();
+    }
+    return block_node;
+}
+
 ASTNode* parse_keyword() {
     char* key = strdup(advance().text);// skip 'keyword' and get the keyword
     if (strcasecmp(key, "print") == 0){
@@ -317,7 +417,13 @@ ASTNode* parse_keyword() {
         if (!condition) return NULL;
         node->type = AST_IF;
         node->if_else.condition = condition;
-        if (advance().type == TOKEN_COLON) return node;
+        if (advance().type == TOKEN_COLON){
+            if(peek().type == TOKEN_EOF){
+                advance();
+                node->if_else.code = block(1);
+                return node;
+            }
+        }
         ast_free(node);
         raiseError(SYNTAX_ERROR, "Missing colon");
         return NULL;
@@ -325,6 +431,7 @@ ASTNode* parse_keyword() {
 }
 
 ASTNode* parse_statement() {
+    if (peek().type == TOKEN_SEMICOLON) current++;
     if (peek().type == TOKEN_KEYWORD) {
         return parse_keyword();
     }

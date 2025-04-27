@@ -9,7 +9,6 @@
 #include "error_handling.h"
 // #include "debug_alloc.h"
 
-extern int current;
 extern int error;
 
 const char* keywords[] = {"exit","print","if","else","True","False","None","debug"}; 
@@ -20,11 +19,11 @@ int debug = 1;
 int interactive(){
     char input[255];
     while (1) {
-        current = 0;
         printf(MAG ">>> " RESET);
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
-    
+        
+        allocate_tokens();
         tokenize(input);
         
         if (debug){ printf("Tokens:\n"); print_tokens_debug();} //for debugging Tokens
@@ -37,10 +36,9 @@ int interactive(){
         if (error) goto end;
 
         while (peek().type != TOKEN_EOF) {
-            if (peek().type == TOKEN_SEMICOLON){ current++; continue;}
             ASTNode* root = parse_statement();
             if (error){ ast_free(root); goto end;}
-            if (debug){ printf("\nAST:\n"); print_ast_debug(root,0);} //for debugging AST
+            if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
             // eval(root);
             ast_free(root);
             // if (error) goto end;

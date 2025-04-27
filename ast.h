@@ -4,7 +4,10 @@
 
 #include "memory.h"
 
+typedef struct ASTNode ASTNode;
+
 typedef enum {
+    AST_BLOCK,
     AST_NONE,
     AST_NUMERIC,
     AST_FLOATING_POINT,
@@ -25,6 +28,11 @@ typedef struct ASTNode {
         
         struct Literal literal; // for AST_NUMERIC,AST_FLOATING_POINT,AST_STRING,AST_BOOLEAN
 
+        struct { // for AST_BLOCK
+            ASTNode** statements;
+            int count;
+        } block;
+
         struct { // for AST_OPERATOR
             struct ASTNode* left;
             char op;
@@ -42,6 +50,7 @@ typedef struct ASTNode {
 
         struct { // for AST_IF
             struct ASTNode* condition;
+            struct ASTNode* code;
         } if_else;
     };
 
@@ -49,7 +58,7 @@ typedef struct ASTNode {
 
 const char* AST_node_name(ASTNodeType type);
 
-void print_ast_debug(ASTNode* node, int indent);
+void print_ast_debug(ASTNode* node, int indent, int is_last);
 void ast_free(ASTNode *node);
 
 Token peek();

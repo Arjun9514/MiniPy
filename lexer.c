@@ -14,6 +14,7 @@ int token_count = 0;
 
 extern int error;
 extern int debug;
+extern int current;
 
 extern char *keywords[];
 extern const int num_keywords;
@@ -112,19 +113,23 @@ void add_token(TokenType type, const char* start, int length) {
     tok->text = strndup(start, length);
 }
 
+void allocate_tokens(){
+    tokens = malloc(sizeof(Token) * MAX_TOKENS);
+}
+
 void reset_tokens() {
     for (int i = 0; i < token_count; i++) {
         free(tokens[i].text);
         tokens[i].text = NULL;
     }
+    free(tokens);
+    tokens = NULL;
     token_count = 0;
     error = 0;
+    current = 0;
 }
 
 void tokenize(const char* src) {
-    tokens = malloc(sizeof(Token) * MAX_TOKENS);
-    token_count = 0;
-
     const char* p = src;
 
     while (*p) {

@@ -42,6 +42,8 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_ASSIGNMENT: return "ASSIGN";
         case AST_PRINT: return "PRINT";
         case AST_IF: return "IF";
+        case AST_ELIF: return "ELIF";
+        case AST_ELSE: return "ELSE";
         case AST_BLOCK: return "BLOCK";
         default: return "UNKNOWN";
     }
@@ -98,6 +100,7 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             break;
 
         case AST_IF:
+        case AST_ELIF:
             printf("\n");
             for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [IF_CONDITION]\n", 195, 196);
@@ -108,15 +111,13 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             print_ast_debug(node->if_else.code, indent + 2, 1);
 
             if (node->if_else.next) {
-                for (int i = 0; i < indent; i++) printf("%c   ", 179);
-                printf("%c%c [ELSE]\n", 195, 196);
-                print_ast_debug(node->if_else.next->if_else.code, indent + 2, 1);
+                print_ast_debug(node->if_else.next, indent, 1);
             }
             break;
 
         case AST_ELSE:
             printf("\n");
-            print_ast_debug(node->if_else.code, indent + 1, 1);
+            print_ast_debug(node->if_else.code, indent + 1, 0);
             break;
 
         case AST_BLOCK:
@@ -168,8 +169,10 @@ void ast_free(ASTNode *node) {
             break;
 
         case AST_IF:
+        case AST_ELIF:
             ast_free(node->if_else.condition);
             ast_free(node->if_else.code);
+            ast_free(node->if_else.next);
             break;
 
         case AST_ELSE:
@@ -361,7 +364,7 @@ ASTNode* parse_assignment() {
     return node;
 }
 
-ASTNode* block(ASTNode* parent_if, int parent_indent){
+ASTNode* block(ASTNode* parent_node, int parent_indent){
     ASTNode* block_node = new_node();
     if (!block_node) return NULL;
     block_node->type = AST_BLOCK;
@@ -384,7 +387,7 @@ ASTNode* block(ASTNode* parent_if, int parent_indent){
                 global_indent--;
                 continue;
             }else{
-                if (block_node->block.count == parent_indent){
+                if (block_node->block.count == 0){
                     global_indent++;
                     continue;
                 }else{
@@ -405,7 +408,7 @@ ASTNode* block(ASTNode* parent_if, int parent_indent){
             return NULL;
         }
 
-        ASTNode* stmt = parse_statement();
+        ASTNode* stmt = parse_statement(parent_node);
         if (!stmt) {
             reset_tokens();
             ast_free(block_node);
@@ -413,22 +416,38 @@ ASTNode* block(ASTNode* parent_if, int parent_indent){
         }
         
         if (stmt->type == AST_ELSE) {
-            if (parent_if && parent_if->type == AST_IF && global_indent == parent_indent) {
-                parent_if->if_else.next = stmt; // connect ELSE to IF
+            if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
+                parent_node->if_else.next = stmt; // connect ELSE to IF
                 break;
             } else {
                 ast_free(stmt);
                 ast_free(block_node);
-                raiseError(SYNTAX_ERROR, "Else without matching If");
+                return NULL;
+            }
+        } else if (stmt->type == AST_ELIF) {
+            if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
+                parent_node->if_else.next = stmt; // connect ELIF to IF
+                parent_node = stmt;
+                break;
+            } else {
+                ast_free(stmt);
+                ast_free(block_node);
                 return NULL;
             }
         } else {
             // Normal statement
             block_node->block.count++;
-            block_node->block.statements = realloc(
+            ASTNode** tmp = realloc(
                 block_node->block.statements,
                 sizeof(ASTNode*) * block_node->block.count
             );
+            if (!tmp) {
+                raiseError(MEMORY_ERROR,"Out of memory");
+                ast_free(stmt);
+                ast_free(block_node);
+                return NULL;
+            }
+            block_node->block.statements = tmp;
             block_node->block.statements[block_node->block.count - 1] = stmt;
         }
 
@@ -437,7 +456,69 @@ ASTNode* block(ASTNode* parent_if, int parent_indent){
     return block_node;
 }
 
-ASTNode* parse_keyword() {
+ASTNode* parse_if(){
+    global_indent++;
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    ASTNode* condition = parse_expression();
+    if (!condition) return NULL;
+    node->type = AST_IF;
+    node->if_else.condition = condition;
+    node->if_else.code = NULL;
+    node->if_else.next = NULL;
+    if (advance().type == TOKEN_COLON){
+        if(peek().type == TOKEN_EOF){
+            advance();
+            node->if_else.code = block(node, global_indent-1);
+            return node;
+        }
+    }
+    ast_free(node);
+    raiseError(SYNTAX_ERROR, "Missing colon");
+    return NULL;
+}
+
+ASTNode* parse_elif(){
+    global_indent++;
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    ASTNode* condition = parse_expression();
+    if (!condition) return NULL;
+    node->type = AST_ELIF;
+    node->if_else.condition = condition;
+    node->if_else.code = NULL;
+    node->if_else.next = NULL;
+    if (advance().type == TOKEN_COLON){
+        if(peek().type == TOKEN_EOF){
+            advance();
+            node->if_else.code = block(node, global_indent-1);
+            return node;
+        }
+    }
+    ast_free(node);
+    raiseError(SYNTAX_ERROR, "Missing colon");
+    return NULL;
+}
+
+ASTNode* parse_else(){
+    global_indent++;
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    node->type = AST_ELSE;
+    node->if_else.code = NULL;
+    if (advance().type == TOKEN_COLON){
+        if(peek().type == TOKEN_EOF){
+            advance();
+            node->if_else.code = block(node, global_indent-1);
+            return node;
+        }
+    }
+    ast_free(node);
+    raiseError(SYNTAX_ERROR, "Missing colon");
+    return NULL;
+}
+
+ASTNode* parse_keyword(ASTNode* parent_node) {
     char* key = strdup(advance().text);// skip 'keyword' and get the keyword
     if (strcasecmp(key, "print") == 0){
         if (peek().type == TOKEN_LPAREN){
@@ -452,48 +533,23 @@ ASTNode* parse_keyword() {
             return NULL;
         }
     }else if (strcasecmp(key, "if") == 0){
-        global_indent++;
-        ASTNode* node = new_node();
-        if (!node) return NULL;
-        ASTNode* condition = parse_expression();
-        if (!condition) return NULL;
-        node->type = AST_IF;
-        node->if_else.condition = condition;
-        node->if_else.code = NULL;
-        node->if_else.next = NULL;
-        if (advance().type == TOKEN_COLON){
-            if(peek().type == TOKEN_EOF){
-                advance();
-                node->if_else.code = block(node, global_indent-1);
-                return node;
-            }
-        }
-        ast_free(node);
-        raiseError(SYNTAX_ERROR, "Missing colon");
-        return NULL;
+        return parse_if();
+    }else if (strcasecmp(key, "elif") == 0){
+        if (!parent_node){raiseError(SYNTAX_ERROR, "Elif without matching If"); goto end;}
+        return parse_elif();
     }else if (strcasecmp(key, "else") == 0){
-        global_indent++;
-        ASTNode* node = new_node();
-        if (!node) return NULL;
-        node->type = AST_ELSE;
-        node->if_else.code = NULL;
-        if (advance().type == TOKEN_COLON){
-            if(peek().type == TOKEN_EOF){
-                advance();
-                node->if_else.code = block(node, global_indent-1);
-                return node;
-            }
-        }
-        ast_free(node);
-        raiseError(SYNTAX_ERROR, "Missing colon");
-        return NULL;
+        if (!parent_node){raiseError(SYNTAX_ERROR, "Else without matching If"); goto end;}
+        return parse_else();
+    }else{
+        end:
+            return NULL;
     }
 }
 
-ASTNode* parse_statement() {
+ASTNode* parse_statement(ASTNode* parent_node) {
     if (peek().type == TOKEN_SEMICOLON) current++;
     if (peek().type == TOKEN_KEYWORD) {
-        return parse_keyword();
+        return parse_keyword(parent_node);
     }
     if (peek().type == TOKEN_IDENTIFIER && tokens[current + 1].type == TOKEN_ASSIGN) {
         return parse_assignment();

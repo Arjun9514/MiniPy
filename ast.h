@@ -18,6 +18,7 @@ typedef enum {
     AST_ASSIGNMENT,
     AST_PRINT,
     AST_IF,
+    AST_ELIF,
     AST_ELSE,
 } ASTNodeType;
 
@@ -49,7 +50,7 @@ typedef struct ASTNode {
             struct ASTNode* value;
         } print;
 
-        struct { // for AST_IF
+        struct { // for AST_IF,AST_ELIF,AST_ELSE
             struct ASTNode* condition;
             struct ASTNode* code;
             struct ASTNode* next;
@@ -67,6 +68,6 @@ Token peek();
 Token advance();
 
 ASTNode* parse_expression();
-ASTNode* parse_statement();
+ASTNode* parse_statement(ASTNode* parent_node);
 
 #endif

@@ -11,7 +11,7 @@
 
 extern int error;
 
-const char* keywords[] = {"exit","print","if","else","True","False","None","debug"}; 
+const char* keywords[] = {"exit","print","if","elif","else","True","False","None","debug"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
 int debug = 0;
@@ -38,7 +38,7 @@ int interactive(){
         if (error) goto end;
 
         while (peek().type != TOKEN_EOF) {
-            ASTNode* root = parse_statement();
+            ASTNode* root = parse_statement(NULL);
             if (error){ ast_free(root); goto end;}
             if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
             // eval(root);

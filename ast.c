@@ -364,12 +364,34 @@ ASTNode* parse_assignment() {
     return node;
 }
 
+ASTNode* new_block() {
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    node->type = AST_BLOCK;
+    node->block.count = 0;
+    node->block.statements = NULL;
+    return node;
+}
+
+ASTNode* update_block(ASTNode* block_node, ASTNode* stmt){
+    block_node->block.count++;
+    ASTNode** tmp = realloc(
+        block_node->block.statements,
+        sizeof(ASTNode*) * block_node->block.count
+    );
+    if (!tmp) {
+        raiseError(MEMORY_ERROR,"Out of memory");
+        ast_free(stmt);
+        ast_free(block_node);
+        return NULL;
+    }
+    block_node->block.statements = tmp;
+    block_node->block.statements[block_node->block.count - 1] = stmt;
+}
+
 ASTNode* block(ASTNode* parent_node, int parent_indent){
-    ASTNode* block_node = new_node();
+    ASTNode* block_node = new_block();
     if (!block_node) return NULL;
-    block_node->type = AST_BLOCK;
-    block_node->block.statements = NULL;
-    block_node->block.count = 0;
 
     char input[255];
     reset_tokens();
@@ -436,21 +458,8 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
             }
         } else {
             // Normal statement
-            block_node->block.count++;
-            ASTNode** tmp = realloc(
-                block_node->block.statements,
-                sizeof(ASTNode*) * block_node->block.count
-            );
-            if (!tmp) {
-                raiseError(MEMORY_ERROR,"Out of memory");
-                ast_free(stmt);
-                ast_free(block_node);
-                return NULL;
-            }
-            block_node->block.statements = tmp;
-            block_node->block.statements[block_node->block.count - 1] = stmt;
+            if (!update_block(block_node,stmt)) return NULL;;
         }
-
         reset_tokens();
     }
     return block_node;

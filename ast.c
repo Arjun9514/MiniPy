@@ -424,18 +424,10 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
         tokenize(input);
         
         if (debug){ printf("Tokens:\n"); print_tokens_debug();}
-        if (error) {
-            reset_tokens();
-            ast_free(block_node);
-            return NULL;
-        }
+        if (error) goto end;
 
         ASTNode* stmt = parse_statement(parent_node);
-        if (!stmt) {
-            reset_tokens();
-            ast_free(block_node);
-            return NULL;
-        }
+        if (!stmt) goto end;
         
         if (stmt->type == AST_ELSE) {
             if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
@@ -463,6 +455,13 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
         reset_tokens();
     }
     return block_node;
+    end:
+        reset_tokens();
+        allocate_tokens();
+        add_token(TOKEN_EOF, "", 0);
+        ast_free(block_node);
+        return NULL;
+
 }
 
 ASTNode* parse_if(){
@@ -479,12 +478,14 @@ ASTNode* parse_if(){
         if(peek().type == TOKEN_EOF){
             advance();
             node->if_else.code = block(node, global_indent-1);
+            if (!node->if_else.code) goto end;
             return node;
         }
     }
-    ast_free(node);
     raiseError(SYNTAX_ERROR, "Missing colon");
-    return NULL;
+    end:
+        ast_free(node);
+        return NULL;
 }
 
 ASTNode* parse_elif(){
@@ -501,12 +502,14 @@ ASTNode* parse_elif(){
         if(peek().type == TOKEN_EOF){
             advance();
             node->if_else.code = block(node, global_indent-1);
+            if (!node->if_else.code) goto end;
             return node;
         }
     }
-    ast_free(node);
     raiseError(SYNTAX_ERROR, "Missing colon");
-    return NULL;
+    end:
+        ast_free(node);
+        return NULL;
 }
 
 ASTNode* parse_else(){
@@ -519,12 +522,14 @@ ASTNode* parse_else(){
         if(peek().type == TOKEN_EOF){
             advance();
             node->if_else.code = block(node, global_indent-1);
+            if (!node->if_else.code) goto end;
             return node;
         }
     }
-    ast_free(node);
     raiseError(SYNTAX_ERROR, "Missing colon");
-    return NULL;
+    end:
+        ast_free(node);
+        return NULL;
 }
 
 ASTNode* parse_keyword(ASTNode* parent_node) {

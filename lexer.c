@@ -101,6 +101,7 @@ const char* token_name(TokenType type) {
         case TOKEN_BRACE_CLOSE: return "R_BRACE";
         case TOKEN_KEYWORD: return "KEYWORD";
         case TOKEN_EOF: return "EOF";
+        case TOKEN_INDENT: return "INDENT";
         case TOKEN_SEMICOLON: return "SEMI_COLON";
         case TOKEN_COLON: return "COLON";
         default: return "UNKNOWN";
@@ -131,11 +132,24 @@ void reset_tokens() {
 
 void tokenize(const char* src) {
     const char* p = src;
+    int spaces = 0;
 
     while (*p) {
-        if (isspace(*p)) {
+        if(*p == '\t'){
+            add_token(TOKEN_INDENT,"",0);
             p++; continue;
         }
+
+        if (isspace(*p)) {
+            spaces++;
+            if (spaces == 4){
+                spaces = 0;
+                add_token(TOKEN_INDENT,"",0);
+            }
+            p++; continue;
+        }
+
+        spaces = 0;
 
         if (isalpha(*p) || *p == '_') {
             const char* start = p;
@@ -228,7 +242,7 @@ void tokenize(const char* src) {
                 break;
             }
         }
-        
+
         switch (*p) {
             case '=': 
                 if(*(p+1) == '='){

@@ -3,6 +3,7 @@
 
 typedef enum {
     TOKEN_EOF,
+    TOKEN_INDENT,
     TOKEN_IDENTIFIER,
     //DATA TYPES
     TOKEN_NONE,

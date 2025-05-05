@@ -398,31 +398,33 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
 
     while (1) {
         printf(MAG "... " RESET);
-        for (int i = 0; i < global_indent; i++) printf("    ");
-
+        
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
 
         // Check empty line -> end of block
         if (strlen(input) == 0) {
-            if (global_indent > parent_indent){
-                global_indent--;
-                continue;
-            }else{
-                if (block_node->block.count == 0){
-                    global_indent++;
-                    continue;
-                }else{
-                    allocate_tokens();
-                    add_token(TOKEN_EOF, "", 0);
-                    break;
-                }
+            global_indent--;
+            if (block_node->block.count == 0){
+                global_indent = 0;
+                raiseError(SYNTAX_ERROR,"Block of statements missing");
+                goto end;
             }
+            allocate_tokens();
+            add_token(TOKEN_EOF, "", 0);
+            break;
         }
         
         allocate_tokens();
         tokenize(input);
         
+        int indent = 0;
+        while(peek().type == TOKEN_INDENT){
+            advance();
+            indent++;
+        }
+        // printf("%d %d\n",global_indent,indent);
+
         if (debug){ printf("Tokens:\n"); print_tokens_debug();}
         if (error) goto end;
 
@@ -450,7 +452,8 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
             }
         } else {
             // Normal statement
-            if (!update_block(block_node,stmt)) return NULL;;
+            if (global_indent != indent){global_indent--;raiseError(INDENTATION_ERROR,"Improper indentation"); goto end;}
+            if (!update_block(block_node,stmt)) return NULL;
         }
         reset_tokens();
     }
@@ -489,7 +492,6 @@ ASTNode* parse_if(){
 }
 
 ASTNode* parse_elif(){
-    global_indent++;
     ASTNode* node = new_node();
     if (!node) return NULL;
     ASTNode* condition = parse_expression();
@@ -513,7 +515,6 @@ ASTNode* parse_elif(){
 }
 
 ASTNode* parse_else(){
-    global_indent++;
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_ELSE;

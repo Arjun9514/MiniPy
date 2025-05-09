@@ -10,6 +10,7 @@
 // #include "debug_alloc.h"
 
 extern int error;
+extern int global_indent;
 
 const char* keywords[] = {"exit","print","if","elif","else","True","False","None","debug"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
@@ -19,6 +20,7 @@ int debug = 0;
 int interactive(){
     char input[255];
     while (1) {
+        global_indent = 0;
         printf(MAG ">>> " RESET);
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';

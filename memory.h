@@ -21,6 +21,7 @@ typedef struct Variable {
 
 extern Variable* symbol_table;
 
+void copy_literal(Literal dest, const Literal src);
 void set_variable(const char* name, Literal literal);
 Literal get_variable(const char* name);
 void get_variables();

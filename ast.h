@@ -67,6 +67,7 @@ void ast_free(ASTNode *node);
 Token peek();
 Token advance();
 
+ASTNode* new_node();
 ASTNode* parse_expression();
 ASTNode* parse_statement(ASTNode* parent_node);
 

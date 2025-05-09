@@ -12,6 +12,35 @@
 
 Variable* symbol_table = NULL;
 
+#include <stdlib.h>
+#include <string.h>
+
+void copy_literal(Literal dest, const Literal src) {
+    dest.datatype = src.datatype;
+    dest.owns_str = 0;
+    switch (src.datatype) {
+        case 'i': // integer
+            dest.numeric = src.numeric;
+            break;
+        case 'f': // float
+            dest.floating_point = src.floating_point;
+            break;
+        case 'b': // boolean
+            dest.boolean = src.boolean;
+            break;
+        case 's': // string
+            if (src.string) {
+                dest.string = strdup(src.string);
+                dest.owns_str = 1;
+            } else {
+                dest.string = NULL;
+                dest.owns_str = 0;
+            }
+            break;
+    }
+}
+
+
 void set_variable(const char* name, Literal lit) {
     Variable* var = symbol_table;
     Literal literal;

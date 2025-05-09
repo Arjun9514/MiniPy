@@ -13,7 +13,7 @@ extern const char* AST_node_name(ASTNodeType type);
 
 void print_literal(Literal lit){
     switch (lit.datatype) {
-        case 'd': printf("%d\n", lit.numeric); break;
+        case 'i': printf("%d\n", lit.numeric); break;
         case 'f': printf("%f\n", lit.floating_point); break;
         case 's': printf("\'%s\'\n", lit.string); break;
         case 'b': {
@@ -93,7 +93,7 @@ ASTNode* operate(ASTNode* node){
     //Check for zero_division error
     if (op == '/'){
         switch (right_val.datatype){
-            case 'd': if(right_val.numeric == 0); goto zero_division_error;
+            case 'i': if(right_val.numeric == 0); goto zero_division_error;
             case 'f': if(right_val.floating_point == 0.0); goto zero_division_error;
             case 'b': if(right_val.boolean == 0); goto zero_division_error;
             default:break;
@@ -103,13 +103,13 @@ ASTNode* operate(ASTNode* node){
     result.owns_str = 0;
 
     // Numeric & Boolean operation
-    if ((left_val.datatype == 'd' && right_val.datatype == 'd') || 
+    if ((left_val.datatype == 'i' && right_val.datatype == 'i') || 
         (left_val.datatype == 'b' && right_val.datatype == 'b') ||
-        ((left_val.datatype == 'd' && right_val.datatype == 'b') || 
-        (left_val.datatype == 'b' && right_val.datatype == 'd'))) {
+        ((left_val.datatype == 'i' && right_val.datatype == 'b') || 
+        (left_val.datatype == 'b' && right_val.datatype == 'i'))) {
         int l = (left_val.datatype == 'b') ? left_val.boolean : left_val.numeric;
         int r = (right_val.datatype == 'b') ? right_val.boolean : right_val.numeric;
-        result.datatype = 'd';
+        result.datatype = 'i';
         switch (op){
             case '+': result.numeric = l + r; break;
             case '-': result.numeric = l - r; break;
@@ -121,10 +121,10 @@ ASTNode* operate(ASTNode* node){
     }
     // Floating point operation
     else if ((left_val.datatype == 'f' && right_val.datatype == 'f') || 
-            (((left_val.datatype == 'd' || left_val.datatype == 'b') && right_val.datatype == 'f') ||
-            (left_val.datatype == 'f' && (right_val.datatype == 'd' || right_val.datatype == 'b')))) {
-        float l = (left_val.datatype == 'f') ? left_val.floating_point : (left_val.datatype == 'd') ? (float)left_val.numeric : (float)left_val.boolean;
-        float r = (right_val.datatype == 'f') ? right_val.floating_point : (right_val.datatype == 'd') ? (float)right_val.numeric : (float)right_val.boolean;
+            (((left_val.datatype == 'i' || left_val.datatype == 'b') && right_val.datatype == 'f') ||
+            (left_val.datatype == 'f' && (right_val.datatype == 'i' || right_val.datatype == 'b')))) {
+        float l = (left_val.datatype == 'f') ? left_val.floating_point : (left_val.datatype == 'i') ? (float)left_val.numeric : (float)left_val.boolean;
+        float r = (right_val.datatype == 'f') ? right_val.floating_point : (right_val.datatype == 'i') ? (float)right_val.numeric : (float)right_val.boolean;
         result.datatype = 'f';
         switch (op){
             case '+': result.floating_point = l + r; break;
@@ -184,8 +184,8 @@ ASTNode* operate(ASTNode* node){
             return NULL;
         //Comparative Operation
         comparative_operation: 
-            float l = (left_val.datatype == 'f') ? left_val.floating_point : (left_val.datatype == 'd') ? (float)left_val.numeric : (float)left_val.boolean;
-            float r = (right_val.datatype == 'f') ? right_val.floating_point : (right_val.datatype == 'd') ? (float)right_val.numeric : (float)right_val.boolean;
+            float l = (left_val.datatype == 'f') ? left_val.floating_point : (left_val.datatype == 'i') ? (float)left_val.numeric : (float)left_val.boolean;
+            float r = (right_val.datatype == 'f') ? right_val.floating_point : (right_val.datatype == 'i') ? (float)right_val.numeric : (float)right_val.boolean;
             result.datatype = 'b';
             switch (op){
                 case '>': result.boolean = l > r; break;
@@ -198,7 +198,7 @@ ASTNode* operate(ASTNode* node){
     }
 
     switch (result.datatype){
-        case 'd': temp->type = AST_NUMERIC; break;
+        case 'i': temp->type = AST_NUMERIC; break;
         case 'f': temp->type = AST_FLOATING_POINT; break;
         case 's': temp->type = AST_STRING; break;
         case 'b': temp->type = AST_BOOLEAN; break;
@@ -227,6 +227,57 @@ void eval(ASTNode* node) {
 
             case AST_PRINT:
                 eval(node->print.value); break;
+
+            case AST_BLOCK:
+                for(int i = 0; i < node->block.count; i++){
+                    eval(node->block.statements[i]);
+                }
+                break;
+
+            case AST_IF:
+            case AST_ELIF:
+                ASTNode* condn = node->if_else.condition;
+                ASTNode* temp;
+                if (condn->type != AST_OPERATOR && condn->type != AST_IDENTIFIER) {
+                    temp = new_node();
+                    temp->type = condn->type;
+                    copy_literal(temp->literal, condn->literal);
+                } else if (condn->type == AST_OPERATOR){
+                    temp = operate(node->if_else.condition);
+                    if (!temp) break;
+                } else if (condn->type == AST_IDENTIFIER){
+                    temp = new_node();
+                    Literal lit = get_variable(node->if_else.condition->name);
+                    copy_literal(temp->literal, lit);
+                    switch (lit.datatype){
+                        case 'i': temp->type = AST_NUMERIC; break;
+                        case 'f': temp->type = AST_FLOATING_POINT; break;
+                        case 's': temp->type = AST_STRING; break;
+                        case 'b': temp->type = AST_BOOLEAN; break;
+                        default:break;
+                    }
+                }
+                switch (temp->type) {
+                    case AST_NUMERIC:
+                        if (temp->literal.numeric != 0){ eval(node->if_else.code); break;}
+                    case AST_FLOATING_POINT:
+                        if (temp->literal.floating_point != 0.0){ eval(node->if_else.code); break;}
+                    case AST_STRING:
+                        if (strlen(temp->literal.string) != 0){ eval(node->if_else.code); break;}
+                    case AST_BOOLEAN:
+                        if (temp->literal.boolean != 0){ eval(node->if_else.code); break;}
+                    case AST_NONE:
+                        ;
+                    default:
+                        eval(node->if_else.next);
+                        break;
+                }
+                ast_free(temp);
+                break;
+            
+            case AST_ELSE:
+                eval(node->if_else.code);    
+                break;
 
             case AST_OPERATOR: {
                 ASTNode* temp = operate(node);

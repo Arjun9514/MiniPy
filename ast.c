@@ -220,7 +220,7 @@ ASTNode* parse_numeric() {
     node->type = AST_NUMERIC;
     char *end;
     int val = (int)strtol(tok.text, &end, 10);
-    node->literal.datatype = 'd';
+    node->literal.datatype = 'i';
     node->literal.numeric = val;
     return node;
 }

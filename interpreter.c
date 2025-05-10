@@ -46,11 +46,15 @@ ASTNode* operate(ASTNode* node){
                 return NULL;
             }else{
                 left_val = lit;
+                left_val.owns_str = 0;
             }
             break;
+        case AST_NONE:
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
-        case AST_BOOLEAN: left_val = node->operate.left->literal; break;
+        case AST_BOOLEAN: 
+            left_val = node->operate.left->literal;
+            left_val.owns_str = 0; break;
         case AST_STRING: 
             left_val.datatype = 's'; 
             left_val.string = strdup(node->operate.left->literal.string);
@@ -75,17 +79,22 @@ ASTNode* operate(ASTNode* node){
                 return NULL;
             }else{
                 right_val = lit;
+                right_val.owns_str = 0;
             }
             break;
+        case AST_NONE:
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
-        case AST_BOOLEAN: right_val = node->operate.right->literal; break;
+        case AST_BOOLEAN: 
+            right_val = node->operate.right->literal;
+            right_val.owns_str = 0; break;
         case AST_STRING:
             right_val.datatype = 's'; 
             right_val.string = strdup(node->operate.right->literal.string);
             right_val.owns_str = 1;
             break;
-        default: goto type_error;
+        default:  
+            goto type_error;
     }
 
     char op = node->operate.op;
@@ -173,7 +182,7 @@ ASTNode* operate(ASTNode* node){
             }
             if (right_val.owns_str) {
                 free(right_val.string);
-            }
+            }  
             sprintf(msg, "Unsupported operand type(s) for \'%c\': \'%c\' and \'%c\'", op, left_val.datatype, right_val.datatype);
             raiseError(TYPE_ERROR, msg);
             free(temp);

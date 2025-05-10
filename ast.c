@@ -209,7 +209,7 @@ ASTNode* parse_none() {
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_NONE;
-    node->literal.datatype = 'n';
+    node->literal.datatype = NONE;
     return node;
 }
 
@@ -220,7 +220,7 @@ ASTNode* parse_numeric() {
     node->type = AST_NUMERIC;
     char *end;
     int val = (int)strtol(tok.text, &end, 10);
-    node->literal.datatype = 'i';
+    node->literal.datatype = INT;
     node->literal.numeric = val;
     return node;
 }
@@ -232,7 +232,7 @@ ASTNode* parse_floating_point() {
     node->type = AST_FLOATING_POINT;
     char *end;
     float val = strtof(tok.text, &end);
-    node->literal.datatype = 'f';
+    node->literal.datatype = FLOAT;
     node->literal.floating_point = val;
     return node;
 }
@@ -242,7 +242,7 @@ ASTNode* parse_string() {
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_STRING;
-    node->literal.datatype = 's';
+    node->literal.datatype = STRING;
     node->literal.string = strdup(tok.text);
     return node;
 }
@@ -253,7 +253,7 @@ ASTNode* parse_boolean() {
     if (!node) return NULL;
     char* end;
     node->type = AST_BOOLEAN;
-    node->literal.datatype = 'b';
+    node->literal.datatype = BOOLEAN;
     if (strcmp(tok.text,"True") == 0){
         node->literal.boolean = 1;
     }else{
@@ -312,7 +312,7 @@ ASTNode* parse_expression_prec(int min_prec) {
             if(peek().text[0] == '+' || peek().text[0] == '-'){
                 left = new_node();
                 left->type = AST_NUMERIC;
-                left->literal.datatype = 'd';
+                left->literal.datatype = INT;
                 left->literal.numeric = 0;
             }else{
                 goto syntax_error;

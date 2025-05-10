@@ -73,6 +73,13 @@ int is_bool(const char* str) {
     return 0;
 }
 
+int is_andor(const char* str) {
+    if (strcmp(str, "and") == 0 || strcmp(str, "or") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 int is_none(const char* str) {
     if (strcmp(str, "None") == 0) {
         return 1;
@@ -161,6 +168,9 @@ void tokenize(const char* src) {
                     add_token(TOKEN_BOOLEAN, start, len);
                 }else if (is_none(str)){
                     add_token(TOKEN_NONE, start, len);
+                }else if (is_andor(str)){
+                    char op = (strcmp(str, "and") == 0) ? '&' : '|';
+                    add_token(TOKEN_OPERATOR, op, 1);
                 }else if(strcasecmp(str,"debug") == 0){
                     p++;
                     switch (*p){

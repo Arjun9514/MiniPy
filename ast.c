@@ -567,7 +567,10 @@ ASTNode* parse_keyword(ASTNode* parent_node) {
 }
 
 ASTNode* parse_statement(ASTNode* parent_node) {
-    if (peek().type == TOKEN_SEMICOLON) current++;
+    if (peek().type == TOKEN_SEMICOLON){ 
+        current++;
+        return NULL;
+    }
     if (peek().type == TOKEN_KEYWORD) {
         return parse_keyword(parent_node);
     }

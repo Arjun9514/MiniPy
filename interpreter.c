@@ -25,9 +25,20 @@ void print_literal(Literal lit){
     }
 }
 
+int is_truthy(Literal val) {
+    switch (val.datatype) {
+        case BOOLEAN: return val.boolean != 0;
+        case INT: return val.numeric != 0;
+        case FLOAT: return val.floating_point != 0.0;
+        case STRING: return val.string && strlen(val.string) > 0;
+        case NONE: return 0;
+        default: return 0;
+    }
+}
+
 ASTNode* operate(ASTNode* node){
     Literal left_val, right_val, result;
-
+    result.owns_str = 0;
     ASTNode* temp = malloc(sizeof(ASTNode));
 
     // Resolve left value
@@ -47,12 +58,8 @@ ASTNode* operate(ASTNode* node){
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
         case AST_BOOLEAN: 
-            left_val = node->operate.left->literal;
-            left_val.owns_str = 0; break;
         case AST_STRING: 
-            left_val.datatype = STRING; 
-            left_val.string = strdup(node->operate.left->literal.string);
-            left_val.owns_str = 1;
+            left_val = copy_literal(node->operate.left->literal);
             break;
         default: goto type_error;
     }
@@ -74,12 +81,8 @@ ASTNode* operate(ASTNode* node){
         case AST_NUMERIC: 
         case AST_FLOATING_POINT: 
         case AST_BOOLEAN: 
-            right_val = node->operate.right->literal;
-            right_val.owns_str = 0; break;
         case AST_STRING:
-            right_val.datatype = STRING; 
-            right_val.string = strdup(node->operate.right->literal.string);
-            right_val.owns_str = 1;
+            right_val = copy_literal(node->operate.right->literal);
             break;
         default:  
             goto type_error;
@@ -95,9 +98,7 @@ ASTNode* operate(ASTNode* node){
             case BOOLEAN: if(right_val.boolean == 0); goto zero_division_error;
             default:break;
         }
-    }
-
-    result.owns_str = 0;
+    }else if(op == '&' || op == '|') goto andor;
 
     // Numeric & Boolean operation
     if ((left_val.datatype == INT && right_val.datatype == INT) || 
@@ -112,40 +113,6 @@ ASTNode* operate(ASTNode* node){
             case '-': result.numeric = l - r; break;
             case '*': result.numeric = l * r; break;
             case '/': result.datatype = FLOAT; result.floating_point = (float)l / r; break;
-            case '&': 
-                if (l == 0) {
-                    if (left_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = 0;
-                    }else{
-                        result.numeric = 0;
-                    }
-                }else{
-                    if (right_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = r;
-                    }else{
-                        result.numeric = r;
-                    }
-                }
-                break;
-            case '|': 
-                if (l != 0) {
-                    if (left_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = l;
-                    }else{
-                        result.numeric = l;
-                    }
-                }else{
-                    if (right_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = r;
-                    }else{
-                        result.numeric = r;
-                    }
-                }
-                break;
             case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }
@@ -162,40 +129,6 @@ ASTNode* operate(ASTNode* node){
             case '-': result.floating_point = l - r; break;
             case '*': result.floating_point = l * r; break;
             case '/': result.floating_point = l / r; break;
-            case '&': 
-                if (l == 0) {
-                    if (left_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = 0;
-                    }else{
-                        result.floating_point = 0;
-                    }
-                }else{
-                    if (right_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = r;
-                    }else{
-                        result.floating_point = r;
-                    }
-                }
-                break;
-            case '|': 
-                if (l != 0) {
-                    if (left_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = l;
-                    }else{
-                        result.floating_point = l;
-                    }
-                }else{
-                    if (right_val.datatype == BOOLEAN) {
-                        result.datatype = BOOLEAN;
-                        result.boolean = r;
-                    }else{
-                        result.floating_point = r;
-                    }
-                }
-                break;
             case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }
@@ -203,30 +136,25 @@ ASTNode* operate(ASTNode* node){
     //String operation
     else if (left_val.datatype == STRING && right_val.datatype == STRING) {
         result.datatype = STRING;
-        if (op == '+') {
-            // printf("[DEBUG] Concatenating '%s' + '%s'\n", left_val.string, right_val.string);
-            size_t len_l = strlen(left_val.string);
-            size_t len_r = strlen(right_val.string);
-            char *buf = malloc(len_l + len_r + 1);
-            if (buf == NULL) {
-                raiseError(MEMORY_ERROR, "Memory allocation failed");
-                return NULL;
+        switch (op){
+            case '+': {
+                size_t len_l = strlen(left_val.string);
+                size_t len_r = strlen(right_val.string);
+                char *buf = malloc(len_l + len_r + 1);
+                if (buf == NULL) {
+                    raiseError(MEMORY_ERROR, "Memory allocation failed");
+                    return NULL;
+                }
+                memcpy(buf, left_val.string, len_l);
+                memcpy(buf + len_l, right_val.string, len_r);
+                buf[len_l + len_r] = '\0'; // Null-terminate the string
+        
+                result.string = buf;
+                result.owns_str = 1;
+                break;
             }
-            memcpy(buf, left_val.string, len_l);
-            memcpy(buf + len_l, right_val.string, len_r);
-            buf[len_l + len_r] = '\0'; // Null-terminate the string
-    
-            result.string = buf;
-            if (left_val.owns_str) {
-                free(left_val.string);
-            }
-            if (right_val.owns_str) {
-                free(right_val.string);
-            }
-            result.owns_str = 1;
-            // printf("[DEBUG] Concatenated result: '%s'\n", result.string);
-        } else {
-            goto type_error;
+            default:
+                goto type_error;
         }
     }
     
@@ -260,6 +188,25 @@ ASTNode* operate(ASTNode* node){
                 case 'l': result.boolean = l <= r; break;
                 case 'n': result.boolean = l != r; break;
             }
+        andor:
+            int left_true = is_truthy(left_val);
+            int right_true = is_truthy(right_val);
+            switch (op){
+                case '&':
+                    if (left_true == 0) {
+                        result = copy_literal(left_val);
+                    }else{
+                        result = copy_literal(right_val);
+                    }
+                    break;
+                case '|':
+                    if (left_true != 0) {
+                        result = copy_literal(left_val);
+                    }else{
+                        result = copy_literal(right_val);
+                    }
+                    break;
+            }
     }
 
     switch (result.datatype){
@@ -270,6 +217,14 @@ ASTNode* operate(ASTNode* node){
         default:break;
     }
     temp->literal = result;
+    
+    if (left_val.owns_str) {
+        free(left_val.string);
+    }
+    if (right_val.owns_str) {
+        free(right_val.string);
+    } 
+    
     return temp;
 }
 

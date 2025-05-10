@@ -41,6 +41,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_IDENTIFIER: return "IDENTIFIER";
         case AST_OPERATOR: return "OPERATOR";
         case AST_ASSIGNMENT: return "ASSIGN";
+        case AST_PASS: return "PASS";
         case AST_PRINT: return "PRINT";
         case AST_IF: return "IF";
         case AST_ELIF: return "ELIF";
@@ -88,6 +89,10 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
 
         case AST_IDENTIFIER:
             printf(" %s\n", node->name);
+            break;
+
+        case AST_PASS:
+            printf("\n");
             break;
 
         case AST_PRINT:
@@ -202,6 +207,13 @@ ASTNode* new_node(){
         raiseError(MEMORY_ERROR, "Out of memory");
         return NULL;
     }
+    return node;
+}
+
+ASTNode* parse_pass() {
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    node->type = AST_PASS;
     return node;
 }
 
@@ -553,6 +565,8 @@ ASTNode* parse_keyword(ASTNode* parent_node) {
             raiseError(SYNTAX_ERROR, "Missing brackets");
             return NULL;
         }
+    }else if (strcasecmp(key, "pass") == 0){
+        return parse_pass();
     }else if (strcasecmp(key, "if") == 0){
         return parse_if();
     }else if (strcasecmp(key, "elif") == 0){

@@ -38,6 +38,8 @@ int is_truthy(Literal val) {
 
 ASTNode* operate(ASTNode* node){
     Literal left_val, right_val, result;
+    left_val.owns_str = 0;
+    right_val.owns_str = 0;
     result.owns_str = 0;
     ASTNode* temp = malloc(sizeof(ASTNode));
 
@@ -238,6 +240,7 @@ void eval(ASTNode* node) {
                 print_literal(node->literal);
                 break;
             case AST_NONE:
+            case AST_PASS:
                 break;
             case AST_IDENTIFIER:{
                 Literal lit = get_variable(node->name);

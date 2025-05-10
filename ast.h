@@ -16,6 +16,7 @@ typedef enum {
     AST_IDENTIFIER,
     AST_OPERATOR,
     AST_ASSIGNMENT,
+    AST_PASS,
     AST_PRINT,
     AST_IF,
     AST_ELIF,

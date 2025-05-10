@@ -112,6 +112,14 @@ ASTNode* operate(ASTNode* node){
             case '-': result.numeric = l - r; break;
             case '*': result.numeric = l * r; break;
             case '/': result.datatype = FLOAT; result.floating_point = (float)l / r; break;
+            case '&': 
+                result.numeric = (l == 0) ? 0 : (r == 0) ? 0 : r;
+                if (left_val.datatype == BOOLEAN && right_val.datatype == BOOLEAN) result.datatype = BOOLEAN;
+                break;
+            case '|': 
+                result.numeric = (l != 0) ? l : ((r != 0) ? r : 0);
+                if (left_val.datatype == BOOLEAN && right_val.datatype == BOOLEAN) result.datatype = BOOLEAN;
+                break;
             case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }

@@ -169,7 +169,7 @@ void tokenize(const char* src) {
                 }else if (is_none(str)){
                     add_token(TOKEN_NONE, start, len);
                 }else if (is_andor(str)){
-                    char op = (strcmp(str, "and") == 0) ? '&' : '|';
+                    char* op = (strcmp(str, "and") == 0) ? "&" : "|";
                     add_token(TOKEN_OPERATOR, op, 1);
                 }else if(strcasecmp(str,"debug") == 0){
                     p++;

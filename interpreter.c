@@ -113,12 +113,38 @@ ASTNode* operate(ASTNode* node){
             case '*': result.numeric = l * r; break;
             case '/': result.datatype = FLOAT; result.floating_point = (float)l / r; break;
             case '&': 
-                result.numeric = (l == 0) ? 0 : (r == 0) ? 0 : r;
-                if (left_val.datatype == BOOLEAN && right_val.datatype == BOOLEAN) result.datatype = BOOLEAN;
+                if (l == 0) {
+                    if (left_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = 0;
+                    }else{
+                        result.numeric = 0;
+                    }
+                }else{
+                    if (right_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = r;
+                    }else{
+                        result.numeric = r;
+                    }
+                }
                 break;
             case '|': 
-                result.numeric = (l != 0) ? l : ((r != 0) ? r : 0);
-                if (left_val.datatype == BOOLEAN && right_val.datatype == BOOLEAN) result.datatype = BOOLEAN;
+                if (l != 0) {
+                    if (left_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = l;
+                    }else{
+                        result.numeric = l;
+                    }
+                }else{
+                    if (right_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = r;
+                    }else{
+                        result.numeric = r;
+                    }
+                }
                 break;
             case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
@@ -136,6 +162,40 @@ ASTNode* operate(ASTNode* node){
             case '-': result.floating_point = l - r; break;
             case '*': result.floating_point = l * r; break;
             case '/': result.floating_point = l / r; break;
+            case '&': 
+                if (l == 0) {
+                    if (left_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = 0;
+                    }else{
+                        result.floating_point = 0;
+                    }
+                }else{
+                    if (right_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = r;
+                    }else{
+                        result.floating_point = r;
+                    }
+                }
+                break;
+            case '|': 
+                if (l != 0) {
+                    if (left_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = l;
+                    }else{
+                        result.floating_point = l;
+                    }
+                }else{
+                    if (right_val.datatype == BOOLEAN) {
+                        result.datatype = BOOLEAN;
+                        result.boolean = r;
+                    }else{
+                        result.floating_point = r;
+                    }
+                }
+                break;
             case '>': case '<': case 'g': case 'e': case 'l': case 'n': goto comparative_operation;
             default: goto type_error;
         }

@@ -12,7 +12,8 @@
 extern int error;
 extern int global_indent;
 
-const char* keywords[] = {"exit","print","if","elif","else","True","False","None","debug","and","or"}; 
+const char* keywords[] = {"exit","print","if","elif","else","True",
+                        "False","None","debug","and","or","not"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
 int debug = 0;

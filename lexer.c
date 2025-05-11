@@ -171,6 +171,8 @@ void tokenize(const char* src) {
                 }else if (is_andor(str)){
                     char* op = (strcmp(str, "and") == 0) ? "&" : "|";
                     add_token(TOKEN_OPERATOR, op, 1);
+                }else if (strcmp(str, "not") == 0){
+                    add_token(TOKEN_OPERATOR, "!", 1);
                 }else if(strcasecmp(str,"debug") == 0){
                     p++;
                     switch (*p){
@@ -268,8 +270,11 @@ void tokenize(const char* src) {
                     char *op = "n";
                     add_token(TOKEN_OPERATOR, op, 1);
                     p++;
-                    break;
+                }else{
+                    add_token(TOKEN_UNKNOWN, p, 1); 
+                    raiseError(SYNTAX_ERROR, "Improper token used");
                 }
+                break;
             case '>': 
                 if(*(p+1) == '='){
                     char *op = "g";

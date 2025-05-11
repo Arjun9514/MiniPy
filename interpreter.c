@@ -91,14 +91,18 @@ ASTNode* operate(ASTNode* node){
     char op = node->operate.op;
     
     //Check for zero_division error
-    if (op == '/'){
-        switch (right_val.datatype){
-            case INT: if(right_val.numeric == 0); goto zero_division_error;
-            case FLOAT: if(right_val.floating_point == 0.0); goto zero_division_error;
-            case BOOLEAN: if(right_val.boolean == 0); goto zero_division_error;
-            default:break;
+    switch (op){
+        case '/': {
+            switch (right_val.datatype){
+                case INT: if(right_val.numeric == 0); goto zero_division_error;
+                case FLOAT: if(right_val.floating_point == 0.0); goto zero_division_error;
+                case BOOLEAN: if(right_val.boolean == 0); goto zero_division_error;
+                default:break;
+            }
+            break;
         }
-    }else if(op == '&' || op == '|') goto andor;
+        case '&': case '|': case '!': goto andornot;
+    }
 
     // Numeric & Boolean operation
     if ((left_val.datatype == INT && right_val.datatype == INT) || 
@@ -188,7 +192,7 @@ ASTNode* operate(ASTNode* node){
                 case 'l': result.boolean = l <= r; break;
                 case 'n': result.boolean = l != r; break;
             }
-        andor:
+        andornot:
             int left_true = is_truthy(left_val);
             int right_true = is_truthy(right_val);
             switch (op){
@@ -205,6 +209,10 @@ ASTNode* operate(ASTNode* node){
                     }else{
                         result = copy_literal(right_val);
                     }
+                    break;
+                case '!':
+                    result.datatype = BOOLEAN;
+                    result.boolean = !right_true;
                     break;
             }
     }

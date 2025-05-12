@@ -268,48 +268,26 @@ void eval(ASTNode* node) {
             case AST_IF:
             case AST_ELIF:{
                 ASTNode* condn = node->if_else.condition;
-                ASTNode* temp;
-                if (condn->type != AST_OPERATOR && condn->type != AST_IDENTIFIER) {
-                    temp = new_node();
-                    temp->type = condn->type;
-                    temp->literal = copy_literal(condn->literal);
-                } else if (condn->type == AST_OPERATOR){
-                    temp = operate(node->if_else.condition);
+                Literal lit;
+                if (condn->type == AST_OPERATOR){
+                    ASTNode* temp = operate(condn);
                     if (!temp) break;
+                    lit = copy_literal(temp->literal);
+                    ast_free(temp);
                 } else if (condn->type == AST_IDENTIFIER){
-                    temp = new_node();
-                    Literal lit = get_variable(node->if_else.condition->name);
-                    temp->literal = copy_literal(lit);
-                    switch (lit.datatype){
-                        case INT: temp->type = AST_NUMERIC; break;
-                        case FLOAT: temp->type = AST_FLOATING_POINT; break;
-                        case STRING: temp->type = AST_STRING; break;
-                        case BOOLEAN: temp->type = AST_BOOLEAN; break;
-                        default:break;
-                    }
+                    lit = get_variable(condn->name);
+                } else {
+                    lit = copy_literal(condn->literal);
                 }
-                switch (temp->type) {
-                    case AST_NUMERIC:
-                        if (temp->literal.numeric != 0) {eval(node->if_else.code); break;}
-                        eval(node->if_else.next); break;
-                    case AST_FLOATING_POINT:
-                        if (temp->literal.floating_point != 0.0) {eval(node->if_else.code); break;}
-                        eval(node->if_else.next); break;
-                    case AST_STRING:
-                        if (strlen(temp->literal.string) != 0) {eval(node->if_else.code); break;}
-                        eval(node->if_else.next); break;
-                    case AST_BOOLEAN:
-                        if (temp->literal.boolean != 0) {eval(node->if_else.code); break;}
-                        eval(node->if_else.next); break;
-                    case AST_NONE:
-                        eval(node->if_else.next); break;
-                    default:
-                        eval(node->if_else.next);
-                        break;
+                if (is_truthy(lit)){
+                    eval(node->if_else.code);
+                } else {
+                    eval(node->if_else.next);
                 }
-                ast_free(temp);
+                if(lit.owns_str) free(lit.string);
                 break;
             }
+
             case AST_ELSE:
                 eval(node->if_else.code);    
                 break;
@@ -338,6 +316,7 @@ void eval(ASTNode* node) {
                 if(lit.owns_str) free(lit.string);
                 break;
             }
+
             case AST_OPERATOR: {
                 ASTNode* temp = operate(node);
                 if (!temp) break;

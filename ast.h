@@ -21,6 +21,7 @@ typedef enum {
     AST_IF,
     AST_ELIF,
     AST_ELSE,
+    AST_WHILE,
 } ASTNodeType;
 
 typedef struct ASTNode {
@@ -56,6 +57,11 @@ typedef struct ASTNode {
             struct ASTNode* code;
             struct ASTNode* next;
         } if_else;
+
+        struct { // for AST_WHILE
+            struct ASTNode* condition;
+            struct ASTNode* code;
+        } _while;
     };
 
 } ASTNode;

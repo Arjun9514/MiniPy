@@ -142,25 +142,46 @@ ASTNode* operate(ASTNode* node){
     //String operation
     else if (left_val.datatype == STRING && right_val.datatype == STRING) {
         result.datatype = STRING;
-        switch (op){
-            case '+': {
-                size_t len_l = strlen(left_val.string);
-                size_t len_r = strlen(right_val.string);
-                char *buf = malloc(len_l + len_r + 1);
+        if (op == '+') {
+            size_t len_l = strlen(left_val.string);
+            size_t len_r = strlen(right_val.string);
+            char *buf = malloc(len_l + len_r + 1);
+            if (buf == NULL) {
+                raiseError(MEMORY_ERROR, "Memory allocation failed");
+                return NULL;
+            }
+            memcpy(buf, left_val.string, len_l);
+            memcpy(buf + len_l, right_val.string, len_r);
+            buf[len_l + len_r] = '\0'; // Null-terminate the string
+    
+            result.string = buf;
+            result.owns_str = 1;
+        } else {
+            goto type_error;
+        }
+    } else if (left_val.datatype == STRING && right_val.datatype == INT) {
+        result.datatype = STRING;
+        if (op == '*') {
+            if (right_val.numeric > 0){
+                size_t len_l = strlen(left_val.string);  
+                char *buf = malloc((len_l * right_val.numeric) + 1);
                 if (buf == NULL) {
                     raiseError(MEMORY_ERROR, "Memory allocation failed");
                     return NULL;
                 }
-                memcpy(buf, left_val.string, len_l);
-                memcpy(buf + len_l, right_val.string, len_r);
-                buf[len_l + len_r] = '\0'; // Null-terminate the string
-        
+                size_t k = 0;
+                while (k < (size_t)right_val.numeric) {
+                    memcpy(buf + (len_l * k), left_val.string, len_l);
+                    k++;
+                }
+                buf[len_l * right_val.numeric] = '\0'; // Null-terminate the string
                 result.string = buf;
                 result.owns_str = 1;
-                break;
+            } else {
+                result.string = "";
             }
-            default:
-                goto type_error;
+        } else {
+            goto type_error;
         }
     }
     

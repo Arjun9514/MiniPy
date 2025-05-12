@@ -23,10 +23,12 @@ int global_indent = 0;
 
 int get_precedence(char op) {
     switch (op) {
-        case '*': case '/': return 4;
-        case '+': case '-': return 3;
-        case '>': case '<': case 'g': case 'e': case 'l': case 'n': return 2;
-        case '&': case '|': return 1;
+        case '*': case '/': return 6;
+        case '+': case '-': return 5;
+        case '>': case '<': case 'g': case 'e': case 'l': case 'n': return 4;
+        case '!': return 3;
+        case '&': return 2; 
+        case '|': return 1;
         default: return 0;
     }
 }
@@ -327,6 +329,11 @@ ASTNode* parse_expression_prec(int min_prec) {
                 left->type = AST_NUMERIC;
                 left->literal.datatype = INT;
                 left->literal.numeric = 0;
+            }else if(peek().text[0] == '!'){
+                left = new_node();
+                left->type = AST_BOOLEAN;
+                left->literal.datatype = BOOLEAN;
+                left->literal.boolean = 1;
             }else{
                 goto syntax_error;
             }
@@ -352,7 +359,7 @@ ASTNode* parse_expression_prec(int min_prec) {
         }
 
         ASTNode* node = new_node();
-    if (!node) return NULL;
+        if (!node) return NULL;
         node->type = AST_OPERATOR;
         node->operate.op = op;
         node->operate.left = left;

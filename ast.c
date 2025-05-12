@@ -45,6 +45,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_IF: return "IF";
         case AST_ELIF: return "ELIF";
         case AST_ELSE: return "ELSE";
+        case AST_WHILE : return "WHILE";
         case AST_BLOCK: return "BLOCK";
         default: return "UNKNOWN";
     }
@@ -121,6 +122,17 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             print_ast_debug(node->if_else.code, indent + 1, 0);
             break;
 
+        case AST_WHILE:
+            printf("\n");
+            for (int i = 0; i < indent; i++) printf("%c   ", 179);
+            printf("%c%c [WHILE_CONDITION]\n", 195, 196);
+            print_ast_debug(node->_while.condition, indent + 2, 1);
+
+            for (int i = 0; i < indent; i++) printf("%c   ", 179);
+            printf("%c%c [WHILE_BODY]\n", 195, 196);
+            print_ast_debug(node->_while.code, indent + 2, 1);
+            break;
+        
         case AST_BLOCK:
             printf("\n");
             for (int i = 0; i < node->block.count; i++) {
@@ -539,6 +551,29 @@ ASTNode* parse_else(){
         return NULL;
 }
 
+ASTNode* parse_while(){
+    global_indent++;
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    ASTNode* condition = parse_expression();
+    if (!condition) return NULL;
+    node->type = AST_WHILE;
+    node->_while.condition = condition;
+    node->_while.code = NULL;
+    if (advance().type == TOKEN_COLON){
+        if(peek().type == TOKEN_EOF){
+            advance();
+            node->_while.code = block(node, global_indent-1);
+            if (!node->_while.code) goto end;
+            return node;
+        }
+    }
+    raiseError(SYNTAX_ERROR, "Missing colon");
+    end:
+        ast_free(node);
+        return NULL;
+}
+
 ASTNode* parse_keyword(ASTNode* parent_node) {
     char* key = strdup(advance().text);// skip 'keyword' and get the keyword
     if (strcasecmp(key, "print") == 0){
@@ -561,6 +596,8 @@ ASTNode* parse_keyword(ASTNode* parent_node) {
     }else if (strcasecmp(key, "else") == 0){
         if (!parent_node){raiseError(SYNTAX_ERROR, "Else without matching If"); goto end;}
         return parse_else();
+    }else if (strcasecmp(key, "while") == 0){
+        return parse_while();
     }else{
         end:
             return NULL;

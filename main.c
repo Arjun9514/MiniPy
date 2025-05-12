@@ -12,7 +12,7 @@
 extern int error;
 extern int global_indent;
 
-const char* keywords[] = {"exit","print","if","elif","else","True","False","None","debug","and","or"}; 
+const char* keywords[] = {"exit","print","if","elif","else","True","False","None","debug","and","or","while"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
 int debug = 0;
@@ -43,10 +43,10 @@ int interactive(){
             ASTNode* root = parse_statement(NULL);
             if (error){ ast_free(root); goto end;}
             if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
-            eval(root);
+            // eval(root);
             ast_free(root);
-            if (error) goto end;
-            if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
+            // if (error) goto end;
+            // if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
         }
         end:
             reset_tokens();

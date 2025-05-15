@@ -1,6 +1,7 @@
 // main.c
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "lexer.h"
 #include "ast.h"
 #include "memory.h"
@@ -9,6 +10,9 @@
 #include "error_handling.h"
 // #include "debug_alloc.h"
 
+#define INITIAL_LINE_CAPACITY 100
+#define MAX_LINE_LENGTH 1024
+
 extern int error;
 extern int global_indent;
 
@@ -16,7 +20,10 @@ const char* keywords[] = {"exit","print","if","elif","else","True",
                         "False","None","debug","and","or","not","pass","while"}; 
 const int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
 
+char **lines;
+
 int debug = 0;
+int current_line = 0;
 
 int interactive(){
     char input[255];
@@ -55,35 +62,85 @@ int interactive(){
     return 0;
 }
 
-// int main() {
-//     interactive();
-//     return 0;
-// }
+char **load_lines(const char *path, int *line_count_out) {
+    FILE *file = fopen(path, "r");
+    if (!file) {
+        perror("Failed to open file");
+        return NULL;
+    }
 
-// #include <stdlib.h>
-// #include <time.h>
-// #include <ctype.h>
-// #include <math.h>
+    int capacity = INITIAL_LINE_CAPACITY;
+    char **lines = malloc(capacity * sizeof(char *));
+    if (!lines) {
+        perror("Failed to allocate memory for lines");
+        fclose(file);
+        return NULL;
+    }
 
-int loader(char *path){
-    FILE *pF = fopen(path,"r");
-    if (pF == NULL) {
-        perror("Error opening file");
+    char buffer[MAX_LINE_LENGTH];
+    int count = 0;
+
+    while (fgets(buffer, sizeof(buffer), file)) {
+        // Remove trailing newline if present
+        buffer[strcspn(buffer, "\r\n")] = 0;
+
+        // Allocate memory for the line
+        lines[count] = malloc(strlen(buffer) + 1);
+        if (!lines[count]) {
+            perror("Failed to allocate memory for a line");
+            break;
+        }
+        strcpy(lines[count], buffer);
+        count++;
+
+        // Resize array if needed
+        if (count >= capacity) {
+            capacity *= 2;
+            char **new_lines = realloc(lines, capacity * sizeof(char *));
+            if (!new_lines) {
+                perror("Failed to reallocate memory for lines");
+                break;
+            }
+            lines = new_lines;
+        }
+    }
+
+    fclose(file);
+
+    if (line_count_out) {
+        *line_count_out = count;
+    }
+
+    return lines;
+}
+
+void free_lines(char **lines, int line_count) {
+    for (int i = 0; i < line_count; i++) {
+        free(lines[i]);
+    }
+    free(lines);
+}
+
+int script(char *path){
+    int line_count;
+    lines = load_lines(path, &line_count);
+
+    if (!lines) {
         return 1;
     }
-    char buffer[1024];
-    while(fgets(buffer,1024,pF) != NULL){
-        // printf("%s",buffer);
-        buffer[strcspn(buffer, "\r\n")] = '\0';
-        
-        if (strlen(buffer) == 0) continue;
+
+    while(current_line < line_count){
+        char* input = lines[current_line];
+        if (debug) printf("%s, %d\n",input, strlen(input));
+
+        if (strlen(input) == 0) goto end;
 
         allocate_tokens();
-        tokenize(buffer);
+        tokenize(input);
         
         if (debug){ printf("Tokens:\n"); print_tokens_debug();} //for debugging Tokens
 
-        if (strcasecmp(buffer, "exit") == 0) {
+        if (strcasecmp(input, "exit") == 0) {
             reset_tokens();
             break;
         }
@@ -101,16 +158,16 @@ int loader(char *path){
         }
         end:
             reset_tokens();
+        current_line++;
     }
-    printf("\n");
-    fclose(pF);
+    free_lines(lines, line_count);
     return 0;
 }
 
 int main(int argc, char *argv[]){
     if(argc > 1){
         char *path = argv[1];
-        loader(path);
+        script(path);
     }else{
         interactive();
     }

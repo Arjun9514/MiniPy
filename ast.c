@@ -13,10 +13,14 @@ extern Token* tokens;
 extern int token_count;
 
 extern char *keywords[];
+extern char **lines;
 extern const int num_keywords;
 
 extern int error;
 extern int debug;
+extern int script_;
+extern int line_count;
+extern int current_line;
 
 int current = 0;
 int global_indent = 0;
@@ -430,11 +434,20 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
     while (1) {
         reset_tokens();
 
-        printf(MAG "... " RESET);
-        
-        if (!fgets(input, sizeof input, stdin)) return block_node;;
-        input[strcspn(input, "\r\n")] = '\0';
-
+        if (!script_) {
+            printf(MAG "... " RESET);
+            
+            if (!fgets(input, sizeof input, stdin)) return block_node;
+            input[strcspn(input, "\r\n")] = '\0';
+        } else {
+            if (current_line >= line_count){
+                allocate_tokens();
+                add_token(TOKEN_EOF, "", 0);
+                return block_node;
+                }
+            strcpy(input,lines[current_line]);
+            current_line++;
+        }
         // Check empty line -> end of block
         if (strlen(input) == 0) {
             global_indent--;

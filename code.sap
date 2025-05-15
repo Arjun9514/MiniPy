@@ -3,4 +3,9 @@ y = 20
 z = "Hello World"
 
 print(x+y)
-print(z)
+if y > x:
+    print(z)
+
+while x<y :
+    print(x)
+    x = x + 1

@@ -24,6 +24,8 @@ char **lines;
 
 int debug = 0;
 int current_line = 0;
+int script_ = 0;
+int line_count;
 
 int interactive(){
     char input[255];
@@ -122,18 +124,16 @@ void free_lines(char **lines, int line_count) {
 }
 
 int script(char *path){
-    int line_count;
     lines = load_lines(path, &line_count);
 
-    if (!lines) {
-        return 1;
-    }
-
+    if (!lines) return 1;
+    
     while(current_line < line_count){
         char* input = lines[current_line];
         if (debug) printf("%s, %d\n",input, strlen(input));
+        current_line++;
 
-        if (strlen(input) == 0) goto end;
+        if (strlen(input) == 0) continue;
 
         allocate_tokens();
         tokenize(input);
@@ -158,7 +158,6 @@ int script(char *path){
         }
         end:
             reset_tokens();
-        current_line++;
     }
     free_lines(lines, line_count);
     return 0;
@@ -167,6 +166,7 @@ int script(char *path){
 int main(int argc, char *argv[]){
     if(argc > 1){
         char *path = argv[1];
+        script_ = 1;
         script(path);
     }else{
         interactive();

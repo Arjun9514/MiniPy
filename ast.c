@@ -117,31 +117,29 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             printf("\n");
             for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [IF_CONDITION]\n", 195, 196);
-            print_ast_debug(node->if_else.condition, indent + 2, 1);
+            print_ast_debug(node->construct.condition, indent + 2, 1);
 
             for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [IF_BODY]\n", 195, 196);
-            print_ast_debug(node->if_else.code, indent + 2, 1);
+            print_ast_debug(node->construct.code, indent + 2, 1);
 
-            if (node->if_else.next) {
-                print_ast_debug(node->if_else.next, indent, 1);
-            }
+            if (node->construct.next) print_ast_debug(node->construct.next, indent, 1);
             break;
 
         case AST_ELSE:
             printf("\n");
-            print_ast_debug(node->if_else.code, indent + 1, 0);
+            print_ast_debug(node->construct.code, indent + 1, 0);
             break;
 
         case AST_WHILE:
             printf("\n");
             for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [WHILE_CONDITION]\n", 195, 196);
-            print_ast_debug(node->_while.condition, indent + 2, 1);
+            print_ast_debug(node->construct.condition, indent + 2, 1);
 
             for (int i = 0; i < indent; i++) printf("%c   ", 179);
             printf("%c%c [WHILE_BODY]\n", 195, 196);
-            print_ast_debug(node->_while.code, indent + 2, 1);
+            print_ast_debug(node->construct.code, indent + 2, 1);
             break;
         
         case AST_BLOCK:
@@ -194,13 +192,18 @@ void ast_free(ASTNode *node) {
 
         case AST_IF:
         case AST_ELIF:
-            ast_free(node->if_else.condition);
-            ast_free(node->if_else.code);
-            ast_free(node->if_else.next);
+            ast_free(node->construct.condition);
+            ast_free(node->construct.code);
+            ast_free(node->construct.next);
             break;
 
         case AST_ELSE:
-            ast_free(node->if_else.code);
+            ast_free(node->construct.code);
+            break;
+
+        case AST_WHILE:
+            ast_free(node->construct.condition);
+            ast_free(node->construct.code);
             break;
 
         case AST_BLOCK:
@@ -236,7 +239,7 @@ ASTNode* parse_pass() {
 }
 
 ASTNode* parse_none() {
-    Token tok = advance();
+    advance();
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_NONE;
@@ -370,6 +373,7 @@ ASTNode* parse_expression_prec(int min_prec) {
         // precedence climbing: right side must be at least prec + 1
         ASTNode* right = parse_expression_prec(prec + 1);
         if (!right) {
+            ast_free(left);
             raiseError(SYNTAX_ERROR, "Expected expression after operator");
             return NULL;
         }
@@ -423,6 +427,7 @@ ASTNode* update_block(ASTNode* block_node, ASTNode* stmt){
     }
     block_node->block.statements = tmp;
     block_node->block.statements[block_node->block.count - 1] = stmt;
+    return block_node;
 }
 
 ASTNode* block(ASTNode* parent_node, int parent_indent){
@@ -463,46 +468,51 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
         allocate_tokens();
         tokenize(input);
         
-        int indent = 0;
-        while(peek().type == TOKEN_INDENT){
-            advance();
-            indent++;
-        }
-        // printf("%d %d\n",global_indent,indent);
-
         if (debug){ printf("Tokens:\n"); print_tokens_debug();}
         if (error) goto end;
 
-        if (indent < global_indent-1){
-            global_indent--;
-            if (block_node->block.count == 0){
-                global_indent = 0;
-                raiseError(SYNTAX_ERROR,"Block of statements missing");
-                goto end;
+        while(peek().type != TOKEN_EOF){        
+            int indent = 0;
+            while(peek().type == TOKEN_INDENT){
+                advance();
+                indent++;
             }
-            return block_node;
-        }
+            // printf("%d %d\n",global_indent,indent);
 
-        while(peek().type != TOKEN_EOF){
+            if (indent < global_indent-1){
+                global_indent--;
+                if (block_node->block.count == 0){
+                    global_indent = 0;
+                    raiseError(SYNTAX_ERROR,"Block of statements missing");
+                    goto end;
+                }
+                return block_node;
+            }
             ASTNode* stmt = parse_statement(parent_node);
             if (!stmt) goto end;
 
             if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
                 if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
-                    parent_node->if_else.next = stmt; // connect ELSE to IF
+                    parent_node->construct.next = stmt; // connect ELSE to IF
                     return block_node;
                 } else {
                     ast_free(stmt);
                     ast_free(block_node);
                     return NULL;
                 }
-            } else if (stmt->type == AST_IF) {
+            } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
                 if (!update_block(block_node,stmt)) return NULL;
             } else {
                 // Normal statement
-                if (global_indent != indent){
-                    raiseError(INDENTATION_ERROR,"Improper indentation"); 
-                    goto end;
+                if (indent <= global_indent-1){
+                    global_indent--;
+                    if (block_node->block.count == 0){
+                        global_indent = 0;
+                        raiseError(SYNTAX_ERROR,"Improper Indentation");
+                        goto end;
+                    }
+                    current = 0;
+                    return block_node;
                 }
                 if (!update_block(block_node,stmt)) return NULL;
             }
@@ -524,14 +534,14 @@ ASTNode* parse_if(){
     ASTNode* condition = parse_expression();
     if (!condition) return NULL;
     node->type = AST_IF;
-    node->if_else.condition = condition;
-    node->if_else.code = NULL;
-    node->if_else.next = NULL;
+    node->construct.condition = condition;
+    node->construct.code = NULL;
+    node->construct.next = NULL;
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->if_else.code = block(node, global_indent-1);
-            if (!node->if_else.code) goto end;
+            node->construct.code = block(node, global_indent-1);
+            if (!node->construct.code) goto end;
             return node;
         }
     }
@@ -547,14 +557,14 @@ ASTNode* parse_elif(){
     ASTNode* condition = parse_expression();
     if (!condition) return NULL;
     node->type = AST_ELIF;
-    node->if_else.condition = condition;
-    node->if_else.code = NULL;
-    node->if_else.next = NULL;
+    node->construct.condition = condition;
+    node->construct.code = NULL;
+    node->construct.next = NULL;
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->if_else.code = block(node, global_indent-1);
-            if (!node->if_else.code) goto end;
+            node->construct.code = block(node, global_indent-1);
+            if (!node->construct.code) goto end;
             return node;
         }
     }
@@ -568,12 +578,14 @@ ASTNode* parse_else(){
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_ELSE;
-    node->if_else.code = NULL;
+    node->construct.condition = NULL;
+    node->construct.code = NULL;
+    node->construct.next = NULL;
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->if_else.code = block(node, global_indent-1);
-            if (!node->if_else.code) goto end;
+            node->construct.code = block(node, global_indent-1);
+            if (!node->construct.code) goto end;
             return node;
         }
     }
@@ -590,13 +602,14 @@ ASTNode* parse_while(){
     ASTNode* condition = parse_expression();
     if (!condition) return NULL;
     node->type = AST_WHILE;
-    node->_while.condition = condition;
-    node->_while.code = NULL;
+    node->construct.condition = condition;
+    node->construct.code = NULL;
+    node->construct.next = NULL;
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->_while.code = block(node, global_indent-1);
-            if (!node->_while.code) goto end;
+            node->construct.code = block(node, global_indent-1);
+            if (!node->construct.code) goto end;
             return node;
         }
     }

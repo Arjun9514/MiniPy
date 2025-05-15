@@ -52,16 +52,11 @@ typedef struct ASTNode {
             struct ASTNode* value;
         } print;
 
-        struct { // for AST_IF,AST_ELIF,AST_ELSE
+        struct { // for AST_IF,AST_ELIF,AST_ELSE,AST_WHILE
             struct ASTNode* condition;
             struct ASTNode* code;
             struct ASTNode* next;
-        } if_else;
-
-        struct { // for AST_WHILE
-            struct ASTNode* condition;
-            struct ASTNode* code;
-        } _while;
+        } construct;
     };
 
 } ASTNode;

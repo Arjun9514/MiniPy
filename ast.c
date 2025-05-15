@@ -437,7 +437,7 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
 
         printf(MAG "... " RESET);
         
-        if (!fgets(input, sizeof input, stdin)) return block_node;
+        if (!fgets(input, sizeof input, stdin)) goto end;
         input[strcspn(input, "\r\n")] = '\0';
 
         // Check empty line -> end of block
@@ -445,18 +445,18 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
             global_indent--;
             if (block_node->block.count == 0){
                 raiseError(SYNTAX_ERROR,"Block of statements missing");
-                goto end;
+                goto mistake;
             }
             allocate_tokens();
             add_token(TOKEN_EOF, "", 0);
-            return block_node;
+            goto end;
         }
         
         allocate_tokens();
         tokenize(input);
         
         if (debug){ printf("Tokens:\n"); print_tokens_debug();}
-        if (error) goto end;
+        if (error) goto mistake;
 
         while(peek().type != TOKEN_EOF){        
             int indent = 0;
@@ -471,17 +471,17 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
                 if (block_node->block.count == 0){
                     global_indent = 0;
                     raiseError(SYNTAX_ERROR,"Block of statements missing");
-                    goto end;
+                    goto mistake;
                 }
-                return block_node;
+                goto end;
             }
             ASTNode* stmt = parse_statement(parent_node);
-            if (!stmt) goto end;
+            if (!stmt) goto mistake;
 
             if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
                 if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
                     parent_node->construct.next = stmt; // connect ELSE to IF
-                    return block_node;
+                    goto end;
                 } else {
                     ast_free(stmt);
                     ast_free(block_node);
@@ -496,22 +496,24 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
                     if (block_node->block.count == 0){
                         global_indent = 0;
                         raiseError(SYNTAX_ERROR,"Improper Indentation");
-                        goto end;
+                        goto mistake;
                     }
                     current = 0;
-                    return block_node;
+                    goto end;
                 }
                 if (!update_block(block_node,stmt)) return NULL;
             }
         }
     }
-    end:
+    mistake:
         global_indent = 0;
         reset_tokens();
         allocate_tokens();
         add_token(TOKEN_EOF, "", 0);
         ast_free(block_node);
         return NULL;
+    end:
+        return block_node;
 }
 
 ASTNode* parse_if(){

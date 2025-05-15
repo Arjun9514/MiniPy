@@ -288,7 +288,7 @@ void eval(ASTNode* node) {
 
             case AST_IF:
             case AST_ELIF:{
-                ASTNode* condn = node->if_else.condition;
+                ASTNode* condn = node->construct.condition;
                 Literal lit;
                 if (condn->type == AST_OPERATOR){
                     ASTNode* temp = operate(condn);
@@ -301,20 +301,20 @@ void eval(ASTNode* node) {
                     lit = copy_literal(condn->literal);
                 }
                 if (is_truthy(lit)){
-                    eval(node->if_else.code);
+                    eval(node->construct.code);
                 } else {
-                    eval(node->if_else.next);
+                    eval(node->construct.next);
                 }
                 if(lit.owns_str) free(lit.string);
                 break;
             }
 
             case AST_ELSE:
-                eval(node->if_else.code);    
+                eval(node->construct.code);    
                 break;
             
             case AST_WHILE:{
-                ASTNode* condn = node->_while.condition;
+                ASTNode* condn = node->construct.condition;
                 Literal lit;
                 while(1){
                     if (condn->type == AST_OPERATOR){
@@ -328,7 +328,7 @@ void eval(ASTNode* node) {
                         lit = copy_literal(condn->literal);
                     }
                     if(is_truthy(lit)) {
-                        eval(node->_while.code);
+                        eval(node->construct.code);
                     }else{
                         break;
                     }

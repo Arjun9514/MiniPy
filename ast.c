@@ -426,9 +426,9 @@ ASTNode* update_block(ASTNode* block_node, ASTNode* stmt){
     return block_node;
 }
 
-ASTNode* block(ASTNode* parent_node, int parent_indent){
+int block(ASTNode* parent_node, int parent_indent){
     ASTNode* block_node = new_block();
-    if (!block_node) return NULL;
+    if (!block_node) goto mistake;
 
     char input[255];
 
@@ -484,11 +484,10 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
                     goto end;
                 } else {
                     ast_free(stmt);
-                    ast_free(block_node);
-                    return NULL;
+                    goto mistake;
                 }
             } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
-                if (!update_block(block_node,stmt)) return NULL;
+                if (!update_block(block_node,stmt)) goto mistake;
             } else {
                 // Normal statement
                 if (indent <= global_indent-1){
@@ -501,7 +500,7 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
                     current = 0;
                     goto end;
                 }
-                if (!update_block(block_node,stmt)) return NULL;
+                if (!update_block(block_node,stmt)) goto mistake;
             }
         }
     }
@@ -511,9 +510,10 @@ ASTNode* block(ASTNode* parent_node, int parent_indent){
         allocate_tokens();
         add_token(TOKEN_EOF, "", 0);
         ast_free(block_node);
-        return NULL;
+        return 0;
     end:
-        return block_node;
+        parent_node->construct.code = block_node;
+        return 1;
 }
 
 ASTNode* parse_if(){
@@ -529,8 +529,7 @@ ASTNode* parse_if(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->construct.code = block(node, global_indent-1);
-            if (!node->construct.code) goto end;
+            if (!block(node, global_indent-1)) goto end;
             return node;
         }
     }
@@ -552,8 +551,7 @@ ASTNode* parse_elif(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->construct.code = block(node, global_indent-1);
-            if (!node->construct.code) goto end;
+            if (!block(node, global_indent-1)) goto end;
             return node;
         }
     }
@@ -573,8 +571,7 @@ ASTNode* parse_else(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->construct.code = block(node, global_indent-1);
-            if (!node->construct.code) goto end;
+            if (!block(node, global_indent-1)) goto end;
             return node;
         }
     }
@@ -597,8 +594,7 @@ ASTNode* parse_while(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            node->construct.code = block(node, global_indent-1);
-            if (!node->construct.code) goto end;
+            if (!block(node, global_indent-1)) goto end;
             return node;
         }
     }

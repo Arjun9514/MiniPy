@@ -1,11 +1,18 @@
 x = 10
-y = 20
+y = 15
 z = "Hello World"
 
 print(x+y)
-if y > x:
+if y < x:       
     print(z)
+    
+elif 1:
+    if (3>2):
+        print("Nice")
+    print("elif")
+else:
+    print(x*y)
 
-while x<y :
+while x < y :
     print(x)
     x = x + 1

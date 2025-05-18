@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "lexer.h"
 #include "ast.h"
 #include "memory.h"
@@ -26,6 +27,13 @@ int debug = 0;
 int current_line = 0;
 int script_ = 0;
 int line_count;
+
+void rstrip(char* str) {
+    int len = strlen(str);
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
+        str[--len] = '\0';
+    }
+}
 
 int interactive(){
     char input[255];
@@ -85,7 +93,9 @@ char **load_lines(const char *path, int *line_count_out) {
     while (fgets(buffer, sizeof(buffer), file)) {
         // Remove trailing newline if present
         buffer[strcspn(buffer, "\r\n")] = 0;
-
+        rstrip(buffer);
+        if (strlen(buffer) == 0) continue; 
+        printf("%s %d\n", buffer,strlen(buffer));
         // Allocate memory for the line
         lines[count] = malloc(strlen(buffer) + 1);
         if (!lines[count]) {
@@ -147,23 +157,26 @@ int script(char *path){
 
         if (error) goto end;
 
-        while (peek().type != TOKEN_EOF) {
-            ASTNode* root = parse_statement(NULL);
-            if (error){ ast_free(root); goto end;}
-            if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
-            eval(root);
-            ast_free(root);
-            if (error) goto end;
-            if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
-        }
-        end:
-            reset_tokens();
+        // while (peek().type != TOKEN_EOF) {
+        //     ASTNode* root = parse_statement(NULL);
+        //     if (error){ ast_free(root); goto end;}
+        //     if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
+        //     eval(root);
+        //     ast_free(root);
+        //     if (error) goto end;
+        //     if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
+        // }
+        reset_tokens();
     }
+    end:
+        exit(1);
     free_lines(lines, line_count);
     return 0;
 }
 
 int main(int argc, char *argv[]){
+    // script_ = 1;
+    // script("");
     if(argc > 1){
         char *path = argv[1];
         script_ = 1;

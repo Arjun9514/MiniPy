@@ -15,7 +15,6 @@
 #define MAX_LINE_LENGTH 1024
 
 extern int error;
-extern int global_indent;
 
 const char* keywords[] = {"exit","print","if","elif","else","True",
                         "False","None","debug","and","or","not","pass","while"}; 
@@ -38,7 +37,6 @@ void rstrip(char* str) {
 int interactive(){
     char input[255];
     while (1) {
-        global_indent = 0;
         printf(MAG ">>> " RESET);
         if (!fgets(input, sizeof input, stdin)) break;
         input[strcspn(input, "\r\n")] = '\0';
@@ -95,7 +93,7 @@ char **load_lines(const char *path, int *line_count_out) {
         buffer[strcspn(buffer, "\r\n")] = 0;
         rstrip(buffer);
         if (strlen(buffer) == 0) continue; 
-        printf("%s %d\n", buffer,strlen(buffer));
+        // printf("%s %d\n", buffer,strlen(buffer));
         // Allocate memory for the line
         lines[count] = malloc(strlen(buffer) + 1);
         if (!lines[count]) {
@@ -134,7 +132,7 @@ void free_lines(char **lines, int line_count) {
 }
 
 int script(char *path){
-    lines = load_lines(path, &line_count);
+    lines = load_lines("code.sap", &line_count);
 
     if (!lines) return 1;
     
@@ -157,15 +155,15 @@ int script(char *path){
 
         if (error) goto end;
 
-        // while (peek().type != TOKEN_EOF) {
-        //     ASTNode* root = parse_statement(NULL);
-        //     if (error){ ast_free(root); goto end;}
-        //     if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
-        //     eval(root);
-        //     ast_free(root);
-        //     if (error) goto end;
-        //     if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
-        // }
+        while (peek().type != TOKEN_EOF) {
+            ASTNode* root = parse_statement(NULL);
+            if (error){ ast_free(root); goto end;}
+            if (debug){ printf("\nAST:\n"); print_ast_debug(root,0,0);} //for debugging AST
+            eval(root);
+            ast_free(root);
+            if (error) goto end;
+            if (debug){ printf("\nVariables:\n"); get_variables();} //for debugging Variable Table
+        }
         reset_tokens();
     }
     end:

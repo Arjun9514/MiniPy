@@ -23,7 +23,6 @@ extern int line_count;
 extern int current_line;
 
 int current = 0;
-int global_indent = 0;
 
 int get_precedence(char op) {
     switch (op) {
@@ -442,83 +441,126 @@ int block(ASTNode* parent_node, int parent_indent){
         if (!script_) {
             printf(MAG "... " RESET);
             
-            if (!fgets(input, sizeof input, stdin)) return block_node;
+            if (!fgets(input, sizeof input, stdin)) goto end;
             input[strcspn(input, "\r\n")] = '\0';
+
+            // Check empty line -> end of block
+            if (strlen(input) == 0) {
+                if (block_node->block.count == 0){
+                    raiseError(SYNTAX_ERROR,"Block of statements missing");
+                    goto mistake;
+                }
+                allocate_tokens();
+                add_token(TOKEN_EOF, "", 0);
+                goto end;
+            }
+            
+            allocate_tokens();
+            tokenize(input);
+            
+            if (debug){ printf("Tokens:\n"); print_tokens_debug();}
+            if (error) goto mistake;
+
+            while(peek().type != TOKEN_EOF){        
+                int indent = 0;
+                while(peek().type == TOKEN_INDENT){
+                    advance();
+                    indent++;
+                }
+                // printf("%d %d\n",global_indent,indent);
+
+                if (indent < parent_indent){
+                    if (block_node->block.count == 0){
+                        raiseError(SYNTAX_ERROR,"Block of statements missing");
+                        goto mistake;
+                    }
+                    goto end;
+                }
+                ASTNode* stmt = parse_statement(parent_node);
+                if (!stmt) goto mistake;
+
+                if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
+                    if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && indent == parent_indent) {
+                        parent_node->construct.next = stmt; // connect ELSE to IF
+                        goto end;
+                    } else {
+                        ast_free(stmt);
+                        goto mistake;
+                    }
+                } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
+                    if (!update_block(block_node,stmt)) goto mistake;
+                } else {
+                    // Normal statement
+                    if (indent <= parent_indent){
+                        if (block_node->block.count == 0){
+                            raiseError(SYNTAX_ERROR,"Improper Indentation");
+                            goto mistake;
+                        }
+                        current = 0;
+                        goto end;
+                    }
+                    if (!update_block(block_node,stmt)) goto mistake;
+                }
+            }
         } else {
             if (current_line >= line_count){
                 allocate_tokens();
                 add_token(TOKEN_EOF, "", 0);
-                return block_node;
-                }
-            strcpy(input,lines[current_line]);
-            current_line++;
-        }
-        // Check empty line -> end of block
-        if (strlen(input) == 0) {
-            global_indent--;
-            if (block_node->block.count == 0){
-                raiseError(SYNTAX_ERROR,"Block of statements missing");
-                goto mistake;
-            }
-            allocate_tokens();
-            add_token(TOKEN_EOF, "", 0);
-            goto end;
-        }
-        
-        allocate_tokens();
-        tokenize(input);
-        
-        if (debug){ printf("Tokens:\n"); print_tokens_debug();}
-        if (error) goto mistake;
-
-        while(peek().type != TOKEN_EOF){        
-            int indent = 0;
-            while(peek().type == TOKEN_INDENT){
-                advance();
-                indent++;
-            }
-            // printf("%d %d\n",global_indent,indent);
-
-            if (indent < global_indent-1){
-                global_indent--;
-                if (block_node->block.count == 0){
-                    global_indent = 0;
-                    raiseError(SYNTAX_ERROR,"Block of statements missing");
-                    goto mistake;
-                }
                 goto end;
             }
-            ASTNode* stmt = parse_statement(parent_node);
-            if (!stmt) goto mistake;
+            strcpy(input,lines[current_line]);
+            current_line++;
 
-            if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
-                if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && global_indent == parent_indent) {
-                    parent_node->construct.next = stmt; // connect ELSE to IF
-                    goto end;
-                } else {
-                    ast_free(stmt);
-                    goto mistake;
+            allocate_tokens();
+            tokenize(input);
+            
+            if (debug){ printf("Tokens:\n"); print_tokens_debug();}
+            if (error) goto mistake;
+
+            while(peek().type != TOKEN_EOF){        
+                int indent = 0;
+                while(peek().type == TOKEN_INDENT){
+                    advance();
+                    indent++;
                 }
-            } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
-                if (!update_block(block_node,stmt)) goto mistake;
-            } else {
-                // Normal statement
-                if (indent <= global_indent-1){
-                    global_indent--;
+                // printf("%d %d\n",global_indent,indent);
+
+                if (indent < parent_indent){
                     if (block_node->block.count == 0){
-                        global_indent = 0;
-                        raiseError(SYNTAX_ERROR,"Improper Indentation");
+                        raiseError(SYNTAX_ERROR,"Block of statements missing");
                         goto mistake;
                     }
-                    current = 0;
                     goto end;
                 }
-                if (!update_block(block_node,stmt)) goto mistake;
+                ASTNode* stmt = parse_statement(parent_node);
+                if (!stmt) goto mistake;
+
+                if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
+                    if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && indent == parent_indent) {
+                        parent_node->construct.next = stmt; // connect ELSE to IF
+                        goto end;
+                    } else {
+                        ast_free(stmt);
+                        goto mistake;
+                    }
+                } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
+                    if (!update_block(block_node,stmt)) goto mistake;
+                } else {
+                    // Normal statement
+                    if (indent <= parent_indent){
+                        if (block_node->block.count == 0){
+                            raiseError(SYNTAX_ERROR,"Improper Indentation");
+                            goto mistake;
+                        }
+                        current = 0;
+                        goto end;
+                    }
+                    if (!update_block(block_node,stmt)) goto mistake;
+                }
             }
         }
     }
     mistake:
-        global_indent = 0;
         reset_tokens();
         allocate_tokens();
         add_token(TOKEN_EOF, "", 0);
@@ -530,7 +572,10 @@ int block(ASTNode* parent_node, int parent_indent){
 }
 
 ASTNode* parse_if(){
-    global_indent++;
+    int indent = 0, j = 0;
+    while (tokens[j].type == TOKEN_INDENT){
+        j++; indent++;
+    }
     ASTNode* node = new_node();
     if (!node) return NULL;
     ASTNode* condition = parse_expression();
@@ -542,7 +587,7 @@ ASTNode* parse_if(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            if (!block(node, global_indent-1)) goto end;
+            if (!block(node, indent)) goto end;
             return node;
         }
     }
@@ -553,6 +598,10 @@ ASTNode* parse_if(){
 }
 
 ASTNode* parse_elif(){
+    int indent = 0, j = 0;
+    while (tokens[j].type == TOKEN_INDENT){
+        j++; indent++;
+    }
     ASTNode* node = new_node();
     if (!node) return NULL;
     ASTNode* condition = parse_expression();
@@ -564,7 +613,7 @@ ASTNode* parse_elif(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            if (!block(node, global_indent-1)) goto end;
+            if (!block(node, indent)) goto end;
             return node;
         }
     }
@@ -575,6 +624,10 @@ ASTNode* parse_elif(){
 }
 
 ASTNode* parse_else(){
+    int indent = 0, j = 0;
+    while (tokens[j].type == TOKEN_INDENT){
+        j++; indent++;
+    }
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_ELSE;
@@ -584,7 +637,7 @@ ASTNode* parse_else(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            if (!block(node, global_indent-1)) goto end;
+            if (!block(node, indent)) goto end;
             return node;
         }
     }
@@ -595,7 +648,10 @@ ASTNode* parse_else(){
 }
 
 ASTNode* parse_while(){
-    global_indent++;
+    int indent = 0, j = 0;
+    while (tokens[j].type == TOKEN_INDENT){
+        j++; indent++;
+    }
     ASTNode* node = new_node();
     if (!node) return NULL;
     ASTNode* condition = parse_expression();
@@ -607,7 +663,7 @@ ASTNode* parse_while(){
     if (advance().type == TOKEN_COLON){
         if(peek().type == TOKEN_EOF){
             advance();
-            if (!block(node, global_indent-1)) goto end;
+            if (!block(node, indent)) goto end;
             return node;
         }
     }

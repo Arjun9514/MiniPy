@@ -14,5 +14,6 @@ else:
     print(x*y)
 
 while x < y :
-    print(x)
+    if x > 12:
+        print(x)
     x = x + 1

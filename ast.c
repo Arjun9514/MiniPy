@@ -532,6 +532,7 @@ int block(ASTNode* parent_node, int parent_indent){
                     }
                     goto end;
                 }
+                int lc = current_line-1;
                 ASTNode* stmt = parse_statement(parent_node);
                 if (!stmt) goto mistake;
 
@@ -544,7 +545,13 @@ int block(ASTNode* parent_node, int parent_indent){
                         goto mistake;
                     }
                 } else if (stmt->type == AST_IF || stmt->type == AST_WHILE) {
-                    if (!update_block(block_node,stmt)) goto mistake;
+                    if (indent == parent_indent) {
+                        ast_free(stmt);
+                        current_line = lc;
+                        goto end;
+                    } else {
+                        if (!update_block(block_node,stmt)) goto mistake;
+                    }
                 } else {
                     // Normal statement
                     if (indent <= parent_indent){

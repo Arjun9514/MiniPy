@@ -173,8 +173,6 @@ int script(char *path){
 }
 
 int main(int argc, char *argv[]){
-    // script_ = 1;
-    // script("");
     if(argc > 1){
         char *path = argv[1];
         script_ = 1;

@@ -259,7 +259,7 @@ ASTNode* operate(ASTNode* node){
     return temp;
 }
 
-void eval(ASTNode* node) {
+int eval(ASTNode* node) {
     if (node != NULL){
         switch (node->type) {
             case AST_NUMERIC:
@@ -268,9 +268,14 @@ void eval(ASTNode* node) {
             case AST_BOOLEAN:
                 print_literal(node->literal);
                 break;
+
             case AST_NONE:
             case AST_PASS:
                 break;
+
+            case AST_BREAK:
+                return 1;
+
             case AST_IDENTIFIER:{
                 Literal lit = get_variable(node->name);
                 if (lit.datatype != ERROR) print_literal(lit);
@@ -282,7 +287,7 @@ void eval(ASTNode* node) {
 
             case AST_BLOCK:
                 for(int i = 0; i < node->block.count; i++){
-                    eval(node->block.statements[i]);
+                    if(eval(node->block.statements[i])) return 1;
                 }
                 break;
 
@@ -301,16 +306,16 @@ void eval(ASTNode* node) {
                     lit = copy_literal(condn->literal);
                 }
                 if (is_truthy(lit)){
-                    eval(node->construct.code);
+                    if(eval(node->construct.code)) return 1;
                 } else {
-                    eval(node->construct.next);
+                    if(eval(node->construct.next)) return 1;
                 }
                 if(lit.owns_str) free(lit.string);
                 break;
             }
 
             case AST_ELSE:
-                eval(node->construct.code);    
+                if(eval(node->construct.code)) return 1;    
                 break;
             
             case AST_WHILE:{
@@ -328,7 +333,7 @@ void eval(ASTNode* node) {
                         lit = copy_literal(condn->literal);
                     }
                     if(is_truthy(lit)) {
-                        eval(node->construct.code);
+                        if(eval(node->construct.code)) break;
                     }else{
                         break;
                     }
@@ -384,4 +389,5 @@ void eval(ASTNode* node) {
             }
         }
     }
+    return 0;
 }

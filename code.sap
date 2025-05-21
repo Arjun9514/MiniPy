@@ -15,5 +15,7 @@ else:
 
 while x < y :
     if x > 12:
+        break
+    else:
         print(x)
     x = x + 1

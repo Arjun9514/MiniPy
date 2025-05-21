@@ -3,6 +3,6 @@
 #define INTERPRETER_H
 
 void print_literal(Literal lit);
-void eval(ASTNode* node);
+int eval(ASTNode* node);
 
 #endif

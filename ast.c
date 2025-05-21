@@ -510,7 +510,10 @@ int block(ASTNode* parent_node, int parent_indent){
                     if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && indent == parent_indent) {
                         parent_node->construct.next = stmt; // connect ELSE to IF
                         goto end;
-                    } else {
+                    } else if (stmt->type == AST_ELSE && parent_node && (parent_node->type == AST_WHILE) && indent == parent_indent) {
+                        parent_node->construct.next = stmt; // connect ELSE to IF
+                        goto end;
+                    }else {
                         ast_free(stmt);
                         goto mistake;
                     }
@@ -565,6 +568,9 @@ int block(ASTNode* parent_node, int parent_indent){
 
                 if (stmt->type == AST_ELIF || stmt->type == AST_ELSE) {
                     if (parent_node && (parent_node->type == AST_IF || parent_node->type == AST_ELIF) && indent == parent_indent) {
+                        parent_node->construct.next = stmt; // connect ELSE to IF
+                        goto end;
+                    } else if (stmt->type == AST_ELSE && parent_node && (parent_node->type == AST_WHILE) && indent == parent_indent) {
                         parent_node->construct.next = stmt; // connect ELSE to IF
                         goto end;
                     } else {

@@ -335,6 +335,7 @@ int eval(ASTNode* node) {
                     if(is_truthy(lit)) {
                         if(eval(node->construct.code)) break;
                     }else{
+                        if(eval(node->construct.next)) return 1;
                         break;
                     }
                     if(lit.owns_str) free(lit.string);

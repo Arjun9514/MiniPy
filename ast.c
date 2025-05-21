@@ -403,9 +403,24 @@ ASTNode* parse_expression_prec(int min_prec) {
 
 ASTNode* parse_assignment() {
     char *name = strdup(advance().text);
-    advance(); // '='
-
-    ASTNode* value = parse_expression();
+    char op = advance().text[0]; // '='
+    
+    ASTNode* value;
+    if (op == '='){
+        value = parse_expression();
+    } else {
+        ASTNode* sub_node = new_node();
+        if (!sub_node) return NULL;
+        sub_node->type = AST_OPERATOR;
+        sub_node->operate.op = op;
+        ASTNode* id = new_node();
+        if (!id) return NULL;
+        id->type = AST_IDENTIFIER;
+        id->name = strdup(name);
+        sub_node->operate.left = id;
+        sub_node->operate.right = parse_expression();
+        value = sub_node;
+    }
 
     ASTNode* node = new_node();
     if (!node) return NULL;

@@ -293,10 +293,38 @@ void tokenize(const char* src) {
                     add_token(TOKEN_OPERATOR, p, 1); 
                 }
                 break;
-            case '+': add_token(TOKEN_OPERATOR, p, 1); break;
-            case '-': add_token(TOKEN_OPERATOR, p, 1); break;
-            case '*': add_token(TOKEN_OPERATOR, p, 1); break;
-            case '/': add_token(TOKEN_OPERATOR, p, 1); break;
+            case '+': 
+                if(*(p+1) == '='){
+                    add_token(TOKEN_ASSIGN, p, 1);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
+            case '-': 
+                if(*(p+1) == '='){
+                    add_token(TOKEN_ASSIGN, p, 1);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
+            case '*':  
+                if(*(p+1) == '='){
+                    add_token(TOKEN_ASSIGN, p, 1);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
+            case '/':  
+                if(*(p+1) == '='){
+                    add_token(TOKEN_ASSIGN, p, 1);
+                    p++;
+                }else{
+                    add_token(TOKEN_OPERATOR, p, 1); 
+                }
+                break;
             case '(': add_token(TOKEN_LPAREN, p, 1); break;
             case ')': add_token(TOKEN_RPAREN, p, 1); break;
             case '{': add_token(TOKEN_BRACE_OPEN, p, 1); break;

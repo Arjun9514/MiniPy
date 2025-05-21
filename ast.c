@@ -47,6 +47,7 @@ const char* AST_node_name(ASTNodeType type) {
         case AST_OPERATOR: return "OPERATOR";
         case AST_ASSIGNMENT: return "ASSIGN";
         case AST_PASS: return "PASS";
+        case AST_BREAK: return "BREAK";
         case AST_PRINT: return "PRINT";
         case AST_IF: return "IF";
         case AST_ELIF: return "ELIF";
@@ -98,6 +99,10 @@ void print_ast_debug(ASTNode* node, int indent, int is_last) {
             break;
 
         case AST_PASS:
+            printf("\n");
+            break;
+        
+        case AST_BREAK:
             printf("\n");
             break;
 
@@ -234,6 +239,13 @@ ASTNode* parse_pass() {
     ASTNode* node = new_node();
     if (!node) return NULL;
     node->type = AST_PASS;
+    return node;
+}
+
+ASTNode* parse_break() {
+    ASTNode* node = new_node();
+    if (!node) return NULL;
+    node->type = AST_BREAK;
     return node;
 }
 
@@ -696,6 +708,8 @@ ASTNode* parse_keyword(ASTNode* parent_node) {
         }
     }else if (strcasecmp(key, "pass") == 0){
         return parse_pass();
+    }else if (strcasecmp(key, "break") == 0){
+        return parse_break();
     }else if (strcasecmp(key, "if") == 0){
         return parse_if();
     }else if (strcasecmp(key, "elif") == 0){
